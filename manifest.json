@@ -1,10 +1,10 @@
 {
-  "name": "Calculadora de Caución",
-  "short_name": "Caución",
+  "name": "Caución Pro",
+  "short_name": "Caución Pro",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#111827",
-  "theme_color": "#111827",
+  "background_color": "#0a0f1c",
+  "theme_color": "#0d9488",
   "icons": [
     {
       "src": "icon-192.png",

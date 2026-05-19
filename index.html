@@ -3,268 +3,310 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Calculadora de Caución</title>
+  <title>Caución Pro</title>
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#111827">
+  <meta name="theme-color" content="#0d9488">
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      background: #0b1220;
-      color: #e5e7eb;
+    :root {
+      --bg: #0a0f1c;
+      --card-bg: #0f1729;
+      --border: #1e293b;
+      --primary: #0d9488;
+      --primary-hover: #14b8a6;
+      --green: #10b981;
+      --red: #ef4444;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --btn-sec: #1e293b;
+      --btn-sec-hover: #263348;
     }
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; margin: 0; background: var(--bg); color: var(--text); }
     .container {
-      max-width: 1120px;
-      margin: 0 auto;
-      padding: 18px;
+      max-width: 1680px; margin: 0 auto; padding: 14px;
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-      align-items: start;
+      grid-template-columns: 1fr 1.5fr 1fr;
+      gap: 14px; align-items: start;
     }
+    .col-left, .col-center, .col-right { display: flex; flex-direction: column; gap: 14px; }
+    .card-full { grid-column: 1 / -1; }
     .card {
-      background: #111827;
-      border: 1px solid #1f2937;
-      border-radius: 14px;
-      padding: 16px;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.35);
-      margin-bottom: 0;
-      height: fit-content;
+      background: var(--card-bg); border: 1px solid var(--border);
+      border-radius: 14px; padding: 16px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.35); height: fit-content;
     }
-    .card-full {
-      grid-column: 1 / -1;
+    h1 { font-size: 17px; margin: 0 0 12px; }
+    label { display: block; margin-top: 10px; font-size: 13px; color: var(--muted); }
+    input, select {
+      width: 100%; padding: 10px 12px; margin-top: 5px;
+      border-radius: 8px; border: 1px solid var(--border);
+      background: var(--bg); color: var(--text); font-size: 15px;
     }
-    h1 { font-size: 20px; margin: 0 0 12px; }
-    label { display: block; margin-top: 12px; font-size: 14px; color: #cbd5e1; }
-    input {
-      width: 100%;
-      padding: 12px;
-      margin-top: 6px;
-      border-radius: 10px;
-      border: 1px solid #334155;
-      background: #0b1220;
-      color: #e5e7eb;
-      font-size: 16px;
-      box-sizing: border-box;
-    }
-    .row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-    }
+    input:focus, select:focus { outline: none; border-color: var(--primary); }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     button {
-      width: 100%;
-      margin-top: 14px;
-      padding: 12px;
-      border: 0;
-      border-radius: 10px;
-      background: #2563eb;
-      color: white;
-      font-size: 16px;
-      cursor: pointer;
+      width: 100%; margin-top: 10px; padding: 10px; border: 0;
+      border-radius: 8px; background: var(--primary); color: white;
+      font-size: 14px; cursor: pointer; transition: background 0.15s;
     }
+    button:hover { background: var(--primary-hover); }
+    .btn-secondary { background: var(--btn-sec); }
+    .btn-secondary:hover { background: var(--btn-sec-hover); }
     .result {
-      margin-top: 14px;
-      padding: 12px;
-      border-radius: 12px;
-      background: #0b1220;
-      border: 1px dashed #334155;
-      line-height: 1.6;
+      margin-top: 12px; padding: 12px; border-radius: 10px;
+      background: var(--bg); border: 1px dashed var(--border);
+      line-height: 1.7; font-size: 13px;
     }
-    .muted { color: #94a3b8; font-size: 13px; margin-top: 10px;}
+    .muted { color: var(--muted); font-size: 12px; margin-top: 8px; }
     .pill {
-      display:inline-block; padding: 2px 10px; border-radius: 999px;
-      background: #1f2937; border: 1px solid #334155; font-size: 12px;
-      margin-left: 6px; color:#cbd5e1;
+      display: inline-block; padding: 2px 8px; border-radius: 999px;
+      background: var(--border); font-size: 11px; margin-left: 6px; color: var(--muted);
     }
-    .hr {
-      margin: 10px 0;
-      border-top: 1px solid #243042;
-    }
-    .ok { color: #22c55e; }
-    .bad { color: #ef4444; }
-    select {
-      width: 100%;
-      padding: 12px;
-      margin-top: 6px;
-      border-radius: 10px;
-      border: 1px solid #334155;
-      background: #0b1220;
-      color: #e5e7eb;
-      font-size: 16px;
-      box-sizing: border-box;
-    }
-    .btn-secondary {
-      background: #374151;
-    }
-    .table-wrap {
-      margin-top: 12px;
-      overflow-x: auto;
-      border: 1px solid #243042;
-      border-radius: 10px;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      min-width: 700px;
-      table-layout: fixed;
-    }
-    th, td {
-      padding: 8px;
-      border-bottom: 1px solid #243042;
-      text-align: left;
-      font-size: 13px;
-    }
-    td.action-cell {
-      text-align: center;
-      width: 96px;
-    }
-    .action-buttons {
-      display: flex;
-      gap: 8px;
-      justify-content: center;
-      align-items: center;
-    }
-    .btn-icon {
-      background: transparent;
-      border: 0;
-      padding: 0;
-      margin: 0;
-      font-size: 18px;
-      font-weight: 700;
-      line-height: 1;
-      cursor: pointer;
-      width: auto;
-      min-width: 24px;
-    }
-    .btn-edit {
-      color: #38bdf8;
-    }
-    .btn-edit:hover {
-      color: #7dd3fc;
-    }
-    .btn-delete {
-      color: #ef4444;
-    }
-    .btn-delete:hover {
-      color: #f87171;
-    }
-    th {
-      color: #cbd5e1;
-      background: #0f172a;
-      position: relative;
-    }
-    th.resizable {
-      user-select: none;
-    }
+    .hr { margin: 10px 0; border-top: 1px solid var(--border); }
+    .ok { color: var(--green); }
+    .bad { color: var(--red); }
+
+    /* Tabla */
+    .table-wrap { margin-top: 10px; overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; }
+    table { width: 100%; border-collapse: collapse; min-width: 480px; table-layout: fixed; }
+    th, td { padding: 7px 8px; border-bottom: 1px solid var(--border); text-align: left; font-size: 12px; }
+    tfoot td { font-weight: bold; background: #080d18; border-top: 2px solid var(--border); border-bottom: none; }
+    th { color: var(--muted); background: #080d18; position: relative; cursor: pointer; user-select: none; }
+    th:hover { color: var(--text); }
+    th .sort-icon { margin-left: 4px; opacity: 0.4; font-size: 10px; }
+    th.sort-active .sort-icon { opacity: 1; color: var(--primary); }
     .col-resizer {
-      position: absolute;
-      top: 0;
-      right: 0;
-      width: 8px;
-      height: 100%;
-      cursor: col-resize;
-      border-right: 1px solid transparent;
+      position: absolute; top: 0; right: 0; width: 8px; height: 100%;
+      cursor: col-resize; border-right: 1px solid transparent;
     }
-    .col-resizer:hover {
-      border-right-color: #3b82f6;
+    .col-resizer:hover { border-right-color: var(--primary); }
+    td.action-cell { text-align: center; width: 68px; }
+    .action-buttons { display: flex; gap: 6px; justify-content: center; align-items: center; }
+    .btn-icon {
+      background: transparent; border: 0; padding: 0; margin: 0;
+      font-size: 16px; font-weight: 700; line-height: 1; cursor: pointer; width: auto;
     }
-    @media (max-width: 980px) {
-      .container {
-        grid-template-columns: 1fr;
-      }
-      .card {
-        margin-bottom: 14px;
-      }
-      .card-full {
-        grid-column: auto;
-      }
+    .btn-edit { color: #38bdf8; }
+    .btn-edit:hover { color: #7dd3fc; background: transparent; }
+    .btn-delete { color: var(--red); }
+    .btn-delete:hover { color: #f87171; background: transparent; }
+
+    /* Filtro chips */
+    .filtro-chips { display: flex; gap: 6px; margin-top: 10px; margin-bottom: 2px; }
+    .filtro-chips button {
+      width: auto; margin-top: 0; padding: 4px 12px; font-size: 12px;
+      border-radius: 999px; background: var(--btn-sec); color: var(--muted);
+    }
+    .filtro-chips button:hover { background: var(--btn-sec-hover); color: var(--text); }
+    .filtro-chips button.active { background: var(--primary); color: white; }
+
+    /* Atajos hint */
+    .atajos-hint {
+      font-size: 11px; color: var(--muted); margin-top: 8px;
+      padding: 5px 10px; background: var(--bg);
+      border-radius: 6px; border: 1px solid var(--border);
+    }
+
+    /* Toast */
+    #toast-container {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      z-index: 9999; display: flex; flex-direction: column; align-items: center;
+      gap: 8px; pointer-events: none;
+    }
+    .toast {
+      padding: 10px 18px; border-radius: 8px; font-size: 13px; color: white;
+      background: #1e293b; border: 1px solid var(--border);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.5); pointer-events: auto;
+      display: flex; align-items: center; gap: 10px;
+      animation: toast-in 0.2s ease;
+    }
+    .toast.ok   { border-left: 3px solid var(--green); }
+    .toast.error { border-left: 3px solid var(--red); }
+    .toast.info  { border-left: 3px solid var(--primary); }
+    .toast-undo {
+      background: var(--primary); color: white; border: none;
+      padding: 3px 10px; border-radius: 5px; font-size: 12px;
+      cursor: pointer; margin: 0; width: auto;
+    }
+    .toast-undo:hover { background: var(--primary-hover); }
+    @keyframes toast-in {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+      display: flex; align-items: center; justify-content: center; z-index: 10000;
+    }
+    .modal-box {
+      background: var(--card-bg); border: 1px solid var(--border);
+      border-radius: 14px; padding: 24px; max-width: 380px; width: 90%;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+    }
+    .modal-title { font-size: 16px; font-weight: bold; margin-bottom: 10px; }
+    .modal-msg   { font-size: 14px; color: var(--muted); margin-bottom: 20px; line-height: 1.5; }
+    .modal-buttons { display: flex; gap: 10px; }
+    .modal-buttons button { margin-top: 0; }
+    .modal-confirm { background: var(--red); }
+    .modal-confirm:hover { background: #f87171; }
+    .modal-cancel  { background: var(--btn-sec); }
+    .modal-cancel:hover { background: var(--btn-sec-hover); }
+
+    /* Estado de sesión */
+    .sesgo-badge {
+      text-align: center; padding: 14px; border-radius: 10px;
+      margin-bottom: 12px; border: 1px solid var(--border);
+    }
+    .sesgo-label { font-size: 26px; font-weight: bold; letter-spacing: 2px; }
+    .sesgo-sub   { font-size: 11px; color: var(--muted); margin-top: 4px; }
+    .sesgo-long    { background: rgba(16,185,129,0.08); border-color: rgba(16,185,129,0.3); }
+    .sesgo-short   { background: rgba(239,68,68,0.08);  border-color: rgba(239,68,68,0.3); }
+    .sesgo-neutral { background: rgba(148,163,184,0.06); }
+    .metricas-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-bottom: 12px; }
+    .metrica-item { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
+    .metrica-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .metrica-valor { font-size: 13px; font-weight: bold; margin-top: 2px; }
+
+    /* SVG */
+    .svg-wrapper { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-top: 10px; }
+
+    /* Responsive */
+    @media (max-width: 1279px) {
+      .container { grid-template-columns: 1fr 1fr; }
+      .col-right  { grid-column: 1 / -1; }
+    }
+    @media (max-width: 767px) {
+      .container { grid-template-columns: 1fr; padding: 10px; }
+      .col-right  { grid-column: auto; }
+      table { min-width: 380px; }
     }
   </style>
 </head>
 <body>
+  <div id="toast-container"></div>
+
   <div class="container">
-    <div class="card">
-      <h1>Calculadora de Caución <span class="pill">AL30 / GD30</span></h1>
-      <label>Precio Compra (A)</label>
-      <input type="number" id="A" placeholder="Ej: 87010">
-      <label>Precio Venta (B)</label>
-      <input type="number" id="B" placeholder="Ej: 87050">
-      <label>Nominales (VN)</label>
-      <input type="number" id="VN" value="0" placeholder="Ej: 20000">
-      <div class="row">
-        <div>
-          <label>Días hábiles/año</label>
-          <input type="number" id="dias" value="365">
+
+    <!-- COLUMNA IZQUIERDA -->
+    <div class="col-left">
+      <div class="card">
+        <h1>Calculadora de Caución <span class="pill">AL30 / GD30</span></h1>
+        <label>Precio Compra (A)</label>
+        <input type="number" id="A" placeholder="Ej: 87010">
+        <label>Precio Venta (B)</label>
+        <input type="number" id="B" placeholder="Ej: 87050">
+        <label>Nominales (VN)</label>
+        <input type="number" id="VN" value="0" placeholder="Ej: 20000">
+        <div class="row">
+          <div>
+            <label>Días hábiles/año</label>
+            <input type="number" id="dias" value="365">
+          </div>
+          <div>
+            <label>Tipo de anualización</label>
+            <input type="text" value="simple" readonly>
+          </div>
         </div>
-        <div>
-          <label>Tipo de anualización</label>
-          <input type="text" value="simple" readonly>
-        </div>
-      </div>
-      <button onclick="calcular()">Calcular</button>
-      <div class="result" id="out">
-        Ingresá valores para calcular.
-      </div>
-      <div class="muted">
-        Derecho de mercado aplicado: 0,01% (0,0001) sobre el bruto (compra suma, venta resta).
+        <button onclick="calcular()">Calcular</button>
+        <div class="result" id="out">Ingresá valores para calcular.</div>
+        <div class="muted">Derecho de mercado aplicado: 0,01% (0,0001) sobre el bruto (compra suma, venta resta).</div>
       </div>
 
-      <div class="hr"></div>
-      <h1>Calculadora Short / Long</h1>
-      <label>Precio base</label>
-      <input type="number" id="precioBaseSL" placeholder="Ej: 92150">
-      <div class="muted">Referencia usada: ±30 puntos.</div>
-      <button onclick="calcularShortLong()">Calcular Short / Long</button>
-      <div class="result" id="outShortLong">Ingresá un precio base para calcular.</div>
+      <div class="card">
+        <h1>Calculadora Short / Long</h1>
+        <label>Precio base</label>
+        <input type="number" id="precioBaseSL" placeholder="Ej: 92150">
+        <div class="muted">Referencia usada: ±30 puntos.</div>
+        <button onclick="calcularShortLong()">Calcular Short / Long</button>
+        <div class="result" id="outShortLong">Ingresá un precio base para calcular.</div>
+      </div>
     </div>
-    <div class="card">
-      <h1>Registro diario de operaciones</h1>
-      <div class="row">
-        <div>
-          <label>Tipo</label>
-          <select id="tipoOp">
-            <option value="compra">Compra</option>
-            <option value="venta">Venta</option>
-          </select>
+
+    <!-- COLUMNA CENTRAL -->
+    <div class="col-center">
+      <div class="card">
+        <h1>Registro diario de operaciones</h1>
+        <div class="row">
+          <div>
+            <label>Tipo</label>
+            <select id="tipoOp">
+              <option value="compra">Compra</option>
+              <option value="venta">Venta</option>
+            </select>
+          </div>
+          <div>
+            <label>Nominales</label>
+            <input type="number" id="opVN" value="0" placeholder="Ej: 20000">
+          </div>
         </div>
-        <div>
-          <label>Nominales</label>
-          <input type="number" id="opVN" value="0" placeholder="Ej: 20000">
+        <label>Precio</label>
+        <input type="number" id="opPrecio" placeholder="Ej: 88000"
+          onkeydown="if(event.key==='Enter') agregarOperacion()">
+        <div class="atajos-hint">Atajos: C = Compra &nbsp;·&nbsp; V = Venta &nbsp;·&nbsp; Enter = Guardar &nbsp;·&nbsp; Esc = Cancelar</div>
+        <button id="btnGuardarOp" onclick="agregarOperacion()">Agregar operación</button>
+        <button id="btnCancelarEdicion" class="btn-secondary" style="display:none" onclick="cancelarEdicion()">Cancelar edición</button>
+        <div class="row" style="margin-top:0">
+          <button class="btn-secondary" onclick="exportarOperacionesTXT()">Exportar TXT</button>
+          <button class="btn-secondary" onclick="confirmarBorrarTodo()">Borrar todo</button>
+        </div>
+        <div class="result" id="resumenOps">Todavía no hay operaciones cargadas.</div>
+
+        <div class="filtro-chips">
+          <button class="active" data-filtro="todo"   onclick="setFiltro('todo')">Todo</button>
+          <button data-filtro="compra" onclick="setFiltro('compra')">Compras</button>
+          <button data-filtro="venta"  onclick="setFiltro('venta')">Ventas</button>
+        </div>
+
+        <div class="table-wrap">
+          <table id="tablaRegistro">
+            <colgroup>
+              <col id="col-fecha"  style="width:130px;">
+              <col id="col-tipo"   style="width:80px;">
+              <col id="col-precio" style="width:108px;">
+              <col id="col-vn"     style="width:100px;">
+              <col id="col-neto"   style="width:118px;">
+              <col id="col-accion" style="width:68px;">
+            </colgroup>
+            <thead>
+              <tr>
+                <th class="resizable" data-col-id="fecha"  onclick="toggleSort('fecha')">Fecha<span class="sort-icon">↕</span><div class="col-resizer" onclick="event.stopPropagation()"></div></th>
+                <th class="resizable" data-col-id="tipo"   onclick="toggleSort('tipo')">Tipo<span class="sort-icon">↕</span><div class="col-resizer" onclick="event.stopPropagation()"></div></th>
+                <th class="resizable" data-col-id="precio" onclick="toggleSort('precio')">Precio<span class="sort-icon">↕</span><div class="col-resizer" onclick="event.stopPropagation()"></div></th>
+                <th class="resizable" data-col-id="vn"     onclick="toggleSort('vn')">Nominales<span class="sort-icon">↕</span><div class="col-resizer" onclick="event.stopPropagation()"></div></th>
+                <th class="resizable" data-col-id="neto"   onclick="toggleSort('neto')">Neto<span class="sort-icon">↕</span><div class="col-resizer" onclick="event.stopPropagation()"></div></th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody id="tablaOps"></tbody>
+            <tfoot id="tablaFoot"></tfoot>
+          </table>
+        </div>
+        <div class="muted">El registro se guarda automáticamente en este dispositivo.</div>
+      </div>
+    </div>
+
+    <!-- COLUMNA DERECHA -->
+    <div class="col-right">
+      <div class="card">
+        <h1>Estado de la sesión</h1>
+        <div id="sesgo-badge" class="sesgo-badge sesgo-neutral">
+          <div class="sesgo-label" id="sesgo-label">—</div>
+          <div class="sesgo-sub"   id="sesgo-sub">Sin operaciones</div>
+        </div>
+        <div class="metricas-grid" id="metricas-grid"></div>
+        <button onclick="toggleGraficoSesion()">Ver gráfico de sesión</button>
+        <div id="grafico-sesion-wrap" style="display:none">
+          <div class="svg-wrapper">
+            <svg id="chartSesion" viewBox="0 0 560 260"
+              style="width:100%;height:auto;background:var(--bg);"></svg>
+          </div>
+          <div class="muted" id="tooltipSesion">Pasá el mouse sobre un punto para ver el detalle.</div>
         </div>
       </div>
-      <label>Precio</label>
-      <input type="number" id="opPrecio" placeholder="Ej: 88000" onkeydown="if(event.key==='Enter') agregarOperacion()">
-      <button id="btnGuardarOp" onclick="agregarOperacion()">Agregar operación</button>
-      <button id="btnCancelarEdicion" class="btn-secondary" style="display:none" onclick="cancelarEdicion()">Cancelar edición</button>
-      <button class="btn-secondary" onclick="exportarOperacionesTXT()">Exportar TXT</button>
-      <button class="btn-secondary" onclick="borrarOperaciones()">Borrar todo</button>
-      <div class="result" id="resumenOps">Todavía no hay operaciones cargadas.</div>
-      <div class="table-wrap">
-        <table id="tablaRegistro">
-          <colgroup>
-            <col id="col-fecha" style="width: 140px;">
-            <col id="col-tipo" style="width: 100px;">
-            <col id="col-precio" style="width: 120px;">
-            <col id="col-vn" style="width: 110px;">
-            <col id="col-neto" style="width: 130px;">
-            <col id="col-accion" style="width: 96px;">
-          </colgroup>
-          <thead>
-            <tr>
-              <th class="resizable" data-col-id="fecha">Fecha<div class="col-resizer"></div></th>
-              <th class="resizable" data-col-id="tipo">Tipo<div class="col-resizer"></div></th>
-              <th class="resizable" data-col-id="precio">Precio<div class="col-resizer"></div></th>
-              <th class="resizable" data-col-id="vn">Nominales<div class="col-resizer"></div></th>
-              <th class="resizable" data-col-id="neto">Neto<div class="col-resizer"></div></th>
-              <th>Acción</th>
-            </tr>
-          </thead>
-          <tbody id="tablaOps"></tbody>
-        </table>
-      </div>
-      <div class="muted">El registro se guarda automáticamente en este dispositivo hasta que presiones "Borrar todo".</div>
     </div>
+
+    <!-- FILA COMPLETA — Módulo de Ganancia -->
     <div class="card card-full">
       <h1>Módulo de Ganancia por Precio del Bono</h1>
       <div class="row">
@@ -290,16 +332,68 @@
       <div class="muted">Escala configurable por rango. Se calcula en saltos de 10 puntos.</div>
       <button onclick="calcularGraficoGanancia()">Generar gráfico</button>
       <div class="result" id="outGraficoGanancia">Ingresá precio base y cantidad para generar el gráfico.</div>
-      <div class="table-wrap">
-        <svg id="chartGanancia" viewBox="0 0 960 320" style="width:100%;height:auto;background:#0b1220;border:1px solid #243042;border-radius:10px;"></svg>
+      <div class="svg-wrapper">
+        <svg id="chartGanancia" viewBox="0 0 960 320"
+          style="width:100%;height:auto;background:var(--bg);"></svg>
       </div>
       <div class="muted" id="tooltipGraficoGanancia">Pasá el mouse sobre la línea del gráfico para ver detalle de cada punto.</div>
     </div>
+
   </div>
+
   <script>
+    // ── Formato ───────────────────────────────────────────────────────────
     function fmtMoneyARS(n) {
       return n.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
+    function fmtFechaSoloDia(fechaISO) {
+      return new Date(fechaISO).toLocaleDateString("es-AR");
+    }
+    function fmtFechaHora(fechaISO) {
+      const d = new Date(fechaISO);
+      return d.toLocaleDateString("es-AR") + " " +
+             d.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
+    }
+
+    // ── Toast ─────────────────────────────────────────────────────────────
+    function mostrarToast(msg, tipo = "info", duracion = 1800, fnUndo = null) {
+      const container = document.getElementById("toast-container");
+      const toast = document.createElement("div");
+      toast.className = `toast ${tipo}`;
+      const span = document.createElement("span");
+      span.textContent = msg;
+      toast.appendChild(span);
+      if (fnUndo) {
+        const btn = document.createElement("button");
+        btn.className = "toast-undo";
+        btn.textContent = "Deshacer";
+        btn.onclick = () => { fnUndo(); toast.remove(); };
+        toast.appendChild(btn);
+      }
+      container.appendChild(toast);
+      setTimeout(() => toast.remove(), duracion);
+    }
+
+    // ── Modal custom ──────────────────────────────────────────────────────
+    function mostrarModal({ titulo, msg, labelConfirm = "Confirmar", onConfirm }) {
+      const overlay = document.createElement("div");
+      overlay.className = "modal-overlay";
+      overlay.innerHTML = `
+        <div class="modal-box">
+          <div class="modal-title">${titulo}</div>
+          <div class="modal-msg">${msg}</div>
+          <div class="modal-buttons">
+            <button class="modal-confirm" id="modal-ok">${labelConfirm}</button>
+            <button class="modal-cancel"  id="modal-cancel">Cancelar</button>
+          </div>
+        </div>`;
+      document.body.appendChild(overlay);
+      overlay.querySelector("#modal-ok").onclick = () => { overlay.remove(); onConfirm(); };
+      overlay.querySelector("#modal-cancel").onclick = () => overlay.remove();
+      overlay.addEventListener("click", (e) => { if (e.target === overlay) overlay.remove(); });
+    }
+
+    // ── Calculadora de Caución (SIN CAMBIOS) ─────────────────────────────
     function calcular() {
       const A = parseFloat(document.getElementById("A").value);
       const B = parseFloat(document.getElementById("B").value);
@@ -309,24 +403,19 @@
         document.getElementById("out").innerHTML = "Ingresá valores válidos. (A > 0 y VN > 0)";
         return;
       }
-      // Spread y caución (manteniendo el concepto de diferencia)
       const diferencia = Math.abs(B - A);
       const caucionDiaria = (diferencia / A) * 100;
       const caucionAnual = caucionDiaria * dias;
-      // Derecho de mercado 0,01% = 0,0001
       const derecho = 0.0001;
-      // Brutos (precio cotiza por 100)
       const brutoCompra = VN * (A / 100);
       const derCompra = brutoCompra * derecho;
       const netoCompra = brutoCompra + derCompra;
       const brutoVenta = VN * (B / 100);
       const derVenta = brutoVenta * derecho;
       const netoVenta = brutoVenta - derVenta;
-      // Resultado neto
       const gananciaNeta = netoVenta - netoCompra;
       const gananciaPorNominal = gananciaNeta / VN;
       const cls = gananciaNeta >= 0 ? "ok" : "bad";
-      const signo = gananciaNeta >= 0 ? "" : "-";
       document.getElementById("out").innerHTML =
         `<b>Diferencia (Compra vs Venta):</b> ${diferencia.toFixed(2)}<br>` +
         `<b>Caución diaria:</b> ${caucionDiaria.toFixed(4)} %<br>` +
@@ -346,35 +435,29 @@
         `<b>Ganancia por nominal:</b> ${gananciaPorNominal.toLocaleString("es-AR", { minimumFractionDigits: 4, maximumFractionDigits: 4 })}`;
     }
 
+    // ── Short / Long (SIN CAMBIOS) ────────────────────────────────────────
     function calcularShortLong() {
       const precioBase = parseFloat(document.getElementById("precioBaseSL").value);
       if (!isFinite(precioBase) || precioBase <= 0) {
         document.getElementById("outShortLong").innerHTML = "Ingresá un precio base válido.";
         return;
       }
-
       const ajuste = 30;
-      const precioLong = precioBase + ajuste;
-      const precioShort = precioBase - ajuste;
-
       document.getElementById("outShortLong").innerHTML =
         `<b>Precio base:</b> $ ${fmtMoneyARS(precioBase)}<br>` +
-        `<b class="ok">LONG (+${ajuste}):</b> $ ${fmtMoneyARS(precioLong)}<br>` +
-        `<b class="bad">SHORT (-${ajuste}):</b> $ ${fmtMoneyARS(precioShort)}`;
+        `<b class="ok">LONG (+${ajuste}):</b> $ ${fmtMoneyARS(precioBase + ajuste)}<br>` +
+        `<b class="bad">SHORT (-${ajuste}):</b> $ ${fmtMoneyARS(precioBase - ajuste)}`;
     }
 
+    // ── Gráfico de Ganancia (SIN CAMBIOS en lógica) ───────────────────────
     function calcularGraficoGanancia() {
       const base = parseFloat(document.getElementById("precioBaseGraf").value);
       const cantidad = parseFloat(document.getElementById("cantidadGraf").value || "0");
       const out = document.getElementById("outGraficoGanancia");
       const svg = document.getElementById("chartGanancia");
-
       if (!isFinite(base) || base <= 0 || !isFinite(cantidad) || cantidad <= 0) {
-        out.innerHTML = "Ingresá un precio base y una cantidad válidos.";
-        svg.innerHTML = "";
-        return;
+        out.innerHTML = "Ingresá un precio base y una cantidad válidos."; svg.innerHTML = ""; return;
       }
-
       const step = 10;
       const desdeInput = parseFloat(document.getElementById("precioDesdeGraf").value);
       const hastaInput = parseFloat(document.getElementById("precioHastaGraf").value);
@@ -382,238 +465,153 @@
       const preciosOps = ops.map((op) => op.precio).filter((p) => isFinite(p));
       const minPrecioOps = preciosOps.length ? Math.min(...preciosOps) : base;
       const maxPrecioOps = preciosOps.length ? Math.max(...preciosOps) : (base + 1000);
-      const minPrecioAuto = Math.min(base, minPrecioOps);
-      const maxPrecioAuto = Math.max(base + 1000, maxPrecioOps);
-      const minPrecioRango = isFinite(desdeInput) ? desdeInput : minPrecioAuto;
-      const maxPrecioRango = isFinite(hastaInput) ? hastaInput : maxPrecioAuto;
+      const minPrecioRango = isFinite(desdeInput) ? desdeInput : Math.min(base, minPrecioOps);
+      const maxPrecioRango = isFinite(hastaInput) ? hastaInput : Math.max(base + 1000, maxPrecioOps);
       if (!(maxPrecioRango > minPrecioRango)) {
-        out.innerHTML = "El rango no es válido. 'Hasta' debe ser mayor que 'Desde'.";
-        svg.innerHTML = "";
-        return;
+        out.innerHTML = "El rango no es válido. 'Hasta' debe ser mayor que 'Desde'."; svg.innerHTML = ""; return;
       }
-      const minPrecioAjustado = Math.floor(minPrecioRango / step) * step;
-      const maxPrecioAjustado = Math.ceil(maxPrecioRango / step) * step;
-      const totalPuntos = Math.floor((maxPrecioAjustado - minPrecioAjustado) / step) + 1;
+      const minPA = Math.floor(minPrecioRango / step) * step;
+      const maxPA = Math.ceil(maxPrecioRango / step) * step;
+      const totalPuntos = Math.floor((maxPA - minPA) / step) + 1;
       const derecho = 0.0001;
       const netoCompraBase = (cantidad * (base / 100)) * (1 + derecho);
       const puntos = [];
       for (let i = 0; i < totalPuntos; i++) {
-        const precio = minPrecioAjustado + (i * step);
+        const precio = minPA + (i * step);
         const netoVenta = (cantidad * (precio / 100)) * (1 - derecho);
-        const ganancia = netoVenta - netoCompraBase;
-        puntos.push({ precio, ganancia });
+        puntos.push({ precio, ganancia: netoVenta - netoCompraBase });
       }
-
       out.innerHTML =
         `<b>Base:</b> $ ${fmtMoneyARS(base)}<br>` +
         `<b>Cantidad:</b> ${cantidad.toLocaleString("es-AR")}<br>` +
-        `<b>Rango X (precio):</b> $ ${fmtMoneyARS(minPrecioAjustado)} a $ ${fmtMoneyARS(maxPrecioAjustado)}<br>` +
+        `<b>Rango X (precio):</b> $ ${fmtMoneyARS(minPA)} a $ ${fmtMoneyARS(maxPA)}<br>` +
         `<b>Rango Y (ganancia neta):</b> $ ${fmtMoneyARS(puntos[0].ganancia)} a $ ${fmtMoneyARS(puntos[puntos.length - 1].ganancia)}<br>` +
         `<b>Derecho aplicado:</b> 0,01% (compra suma, venta resta)<br>` +
         `<b>Operaciones en gráfico:</b> ${ops.length}`;
-
       renderizarGraficoGanancia(svg, puntos, ops, base, cantidad);
     }
 
     function renderizarGraficoGanancia(svg, puntos, ops, base, cantidad) {
-      const width = 960;
-      const height = 320;
-      const padLeft = 75;
-      const padRight = 20;
-      const padTop = 20;
-      const padBottom = 45;
-      const plotW = width - padLeft - padRight;
-      const plotH = height - padTop - padBottom;
-
-      const minX = puntos[0].precio;
-      const maxX = puntos[puntos.length - 1].precio;
+      const width = 960, height = 320, padLeft = 75, padRight = 20, padTop = 20, padBottom = 45;
+      const plotW = width - padLeft - padRight, plotH = height - padTop - padBottom;
+      const minX = puntos[0].precio, maxX = puntos[puntos.length - 1].precio;
       const minY = Math.min(...puntos.map((p) => p.ganancia));
       const maxY = Math.max(...puntos.map((p) => p.ganancia));
       const ySpan = maxY - minY || 1;
-
       const xToPx = (x) => padLeft + ((x - minX) / (maxX - minX || 1)) * plotW;
       const yToPx = (y) => padTop + (1 - ((y - minY) / ySpan)) * plotH;
-
-      const path = puntos.map((p, idx) => `${idx === 0 ? "M" : "L"} ${xToPx(p.precio)} ${yToPx(p.ganancia)}`).join(" ");
-
-      let circles = "";
-      let xLabels = "";
-      const precioCompraMarcado = base;
-      const gananciaCompraMarcada = puntos.find((p) => p.precio === precioCompraMarcado)?.ganancia;
+      const path = puntos.map((p, i) => `${i === 0 ? "M" : "L"} ${xToPx(p.precio)} ${yToPx(p.ganancia)}`).join(" ");
+      let circles = "", xLabels = "";
+      const gananciaBase = puntos.find((p) => p.precio === base)?.ganancia;
       const labelStep = maxX - minX > 1200 ? 100 : 50;
       for (const p of puntos) {
-        const x = xToPx(p.precio);
-        const y = yToPx(p.ganancia);
-        circles += `<circle cx="${x}" cy="${y}" r="3" fill="#22c55e" />`;
-        if ((p.precio - minX) % labelStep === 0) {
-          xLabels += `<text x="${x}" y="${height - 12}" font-size="10" fill="#cbd5e1" text-anchor="middle">${Math.round(p.precio)}</text>`;
-        }
+        circles += `<circle cx="${xToPx(p.precio)}" cy="${yToPx(p.ganancia)}" r="3" fill="#10b981" />`;
+        if ((p.precio - minX) % labelStep === 0)
+          xLabels += `<text x="${xToPx(p.precio)}" y="${height - 12}" font-size="10" fill="#94a3b8" text-anchor="middle">${Math.round(p.precio)}</text>`;
       }
-
       let puntoCompra = "";
-      if (gananciaCompraMarcada !== undefined) {
-        const xCompra = xToPx(precioCompraMarcado);
-        const yCompra = yToPx(gananciaCompraMarcada);
-        puntoCompra = `
-          <circle cx="${xCompra}" cy="${yCompra}" r="6" fill="#3b82f6" stroke="#bfdbfe" stroke-width="1.5" />
-          <text x="${xCompra}" y="${yCompra - 10}" font-size="11" fill="#93c5fd" text-anchor="middle">Compra (base)</text>
-        `;
+      if (gananciaBase !== undefined) {
+        const xc = xToPx(base), yc = yToPx(gananciaBase);
+        puntoCompra = `<circle cx="${xc}" cy="${yc}" r="6" fill="#0d9488" stroke="#99f6e4" stroke-width="1.5" />
+          <text x="${xc}" y="${yc - 10}" font-size="11" fill="#5eead4" text-anchor="middle">Compra (base)</text>`;
       }
-
-      let puntosOperaciones = "";
+      let puntosOps = "";
       const ultimaOpId = ops.length ? ops[ops.length - 1].id : null;
       for (const op of ops) {
         if (!isFinite(op.precio)) continue;
-        const netoVentaOp = (cantidad * (op.precio / 100)) * (1 - 0.0001);
-        const gananciaOp = netoVentaOp - ((cantidad * (base / 100)) * (1 + 0.0001));
-        const xOp = xToPx(op.precio);
-        const yOp = yToPx(gananciaOp);
-        const colorOp = op.tipo === "compra" ? "#22c55e" : "#ef4444";
-        const radioOp = op.id === ultimaOpId ? 10 : 7;
-        const strokeOp = op.id === ultimaOpId ? "#ffffff" : "#0b1220";
-        const strokeW = op.id === ultimaOpId ? 2 : 1.5;
-        const formaOp = op.tipo === "compra"
-          ? `${xOp},${yOp - radioOp} ${xOp - radioOp},${yOp + radioOp} ${xOp + radioOp},${yOp + radioOp}`
-          : `${xOp},${yOp + radioOp} ${xOp - radioOp},${yOp - radioOp} ${xOp + radioOp},${yOp - radioOp}`;
-        puntosOperaciones += `
-          <polygon points="${formaOp}" fill="${colorOp}" stroke="${strokeOp}" stroke-width="${strokeW}" />
-        `;
+        const ganOp = ((cantidad * (op.precio / 100)) * (1 - 0.0001)) - ((cantidad * (base / 100)) * (1 + 0.0001));
+        const xo = xToPx(op.precio), yo = yToPx(ganOp);
+        const color = op.tipo === "compra" ? "#10b981" : "#ef4444";
+        const r = op.id === ultimaOpId ? 10 : 7;
+        const stroke = op.id === ultimaOpId ? "#ffffff" : "#0a0f1c";
+        const sw = op.id === ultimaOpId ? 2 : 1.5;
+        const pts = op.tipo === "compra"
+          ? `${xo},${yo - r} ${xo - r},${yo + r} ${xo + r},${yo + r}`
+          : `${xo},${yo + r} ${xo - r},${yo - r} ${xo + r},${yo - r}`;
+        puntosOps += `<polygon points="${pts}" fill="${color}" stroke="${stroke}" stroke-width="${sw}" />`;
       }
-
-      let breakEvenLine = "";
+      let breakEven = "";
       if (minY <= 0 && maxY >= 0) {
-        const yZero = yToPx(0);
-        breakEvenLine = `
-          <line x1="${padLeft}" y1="${yZero}" x2="${width - padRight}" y2="${yZero}" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4 4" />
-          <text x="${width - padRight}" y="${yZero - 6}" font-size="10" fill="#fbbf24" text-anchor="end">Break-even (0)</text>
-        `;
+        const yz = yToPx(0);
+        breakEven = `<line x1="${padLeft}" y1="${yz}" x2="${width - padRight}" y2="${yz}" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4 4" />
+          <text x="${width - padRight}" y="${yz - 6}" font-size="10" fill="#fbbf24" text-anchor="end">Break-even (0)</text>`;
       }
-
-      const yTicks = 5;
-      let yGrid = "";
-      let yLabels = "";
-      for (let i = 0; i <= yTicks; i++) {
-        const t = i / yTicks;
-        const yVal = maxY - t * ySpan;
-        const yPx = padTop + t * plotH;
-        yGrid += `<line x1="${padLeft}" y1="${yPx}" x2="${width - padRight}" y2="${yPx}" stroke="#1f2937" stroke-width="1" />`;
-        yLabels += `<text x="${padLeft - 8}" y="${yPx + 4}" font-size="10" fill="#cbd5e1" text-anchor="end">$${fmtMoneyARS(yVal)}</text>`;
+      let yGrid = "", yLabels = "";
+      for (let i = 0; i <= 5; i++) {
+        const t = i / 5, yVal = maxY - t * ySpan, yPx = padTop + t * plotH;
+        yGrid   += `<line x1="${padLeft}" y1="${yPx}" x2="${width - padRight}" y2="${yPx}" stroke="#1e293b" stroke-width="1" />`;
+        yLabels += `<text x="${padLeft - 8}" y="${yPx + 4}" font-size="10" fill="#94a3b8" text-anchor="end">$${fmtMoneyARS(yVal)}</text>`;
       }
-
       svg.innerHTML = `
         <line x1="${padLeft}" y1="${padTop}" x2="${padLeft}" y2="${height - padBottom}" stroke="#64748b" />
         <line x1="${padLeft}" y1="${height - padBottom}" x2="${width - padRight}" y2="${height - padBottom}" stroke="#64748b" />
-        ${yGrid}
-        ${breakEvenLine}
-        <path d="${path}" fill="none" stroke="#3b82f6" stroke-width="1.6" />
-        ${circles}
-        ${puntosOperaciones}
-        ${puntoCompra}
-        ${xLabels}
-        ${yLabels}
-        <text x="${width / 2}" y="${height - 2}" font-size="12" fill="#e5e7eb" text-anchor="middle">X: Precio del bono</text>
-        <text x="16" y="${height / 2}" font-size="12" fill="#e5e7eb" text-anchor="middle" transform="rotate(-90 16 ${height / 2})">Y: Ganancia</text>
-      `;
-
+        ${yGrid}${breakEven}
+        <path d="${path}" fill="none" stroke="#0d9488" stroke-width="1.6" />
+        ${circles}${puntosOps}${puntoCompra}${xLabels}${yLabels}
+        <text x="${width / 2}" y="${height - 2}" font-size="12" fill="#e2e8f0" text-anchor="middle">X: Precio del bono</text>
+        <text x="16" y="${height / 2}" font-size="12" fill="#e2e8f0" text-anchor="middle" transform="rotate(-90 16 ${height / 2})">Y: Ganancia</text>`;
       const tooltip = document.getElementById("tooltipGraficoGanancia");
       svg.onmousemove = (event) => {
         const rect = svg.getBoundingClientRect();
         const mouseX = event.clientX - rect.left;
-        let mejor = puntos[0];
-        let mejorDist = Infinity;
+        let mejor = puntos[0], mejorDist = Infinity;
         for (const p of puntos) {
-          const px = xToPx(p.precio) * (rect.width / width);
-          const dist = Math.abs(px - mouseX);
-          if (dist < mejorDist) {
-            mejorDist = dist;
-            mejor = p;
-          }
+          const dist = Math.abs(xToPx(p.precio) * (rect.width / width) - mouseX);
+          if (dist < mejorDist) { mejorDist = dist; mejor = p; }
         }
-        tooltip.innerHTML =
-          `<b>Precio:</b> $ ${fmtMoneyARS(mejor.precio)} | ` +
-          `<b>Ganancia neta:</b> $ ${fmtMoneyARS(mejor.ganancia)}`;
+        tooltip.innerHTML = `<b>Precio:</b> $ ${fmtMoneyARS(mejor.precio)} | <b>Ganancia neta:</b> $ ${fmtMoneyARS(mejor.ganancia)}`;
       };
-      svg.onmouseleave = () => {
-        tooltip.innerHTML = "Pasá el mouse sobre la línea del gráfico para ver detalle de cada punto.";
-      };
+      svg.onmouseleave = () => { tooltip.innerHTML = "Pasá el mouse sobre la línea del gráfico para ver detalle de cada punto."; };
     }
-    const STORAGE_KEY = "caucion_operaciones_diarias";
-    const COL_WIDTHS_KEY = "caucion_table_col_widths";
+
+    // ── Storage ───────────────────────────────────────────────────────────
+    const STORAGE_KEY     = "caucion_operaciones_diarias";
+    const COL_WIDTHS_KEY  = "caucion_table_col_widths";
     let editandoOperacionId = null;
     let ultimoVN = 0;
-    function fmtFechaSoloDia(fechaISO) {
-      return new Date(fechaISO).toLocaleDateString("es-AR");
-    }
+    let filtroTabla = "todo";
+    let sortCol = null, sortDir = 1;
+    let opEliminadaUndo = null;
+
     function getOperaciones() {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        return raw ? JSON.parse(raw) : [];
-      } catch {
-        return [];
-      }
+      try { const r = localStorage.getItem(STORAGE_KEY); return r ? JSON.parse(r) : []; }
+      catch { return []; }
     }
-    function saveOperaciones(ops) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(ops));
-    }
+    function saveOperaciones(ops) { localStorage.setItem(STORAGE_KEY, JSON.stringify(ops)); }
+
+    // ── Formulario ────────────────────────────────────────────────────────
     function limpiarFormularioOperacion() {
-      document.getElementById("tipoOp").value = "compra";
+      document.getElementById("tipoOp").value  = "compra";
       document.getElementById("opPrecio").value = "";
-      document.getElementById("opVN").value = ultimoVN > 0 ? String(ultimoVN) : "0";
+      document.getElementById("opVN").value     = ultimoVN > 0 ? String(ultimoVN) : "0";
     }
     function setModoEdicion(activo) {
-      const btnGuardar = document.getElementById("btnGuardarOp");
-      const btnCancelar = document.getElementById("btnCancelarEdicion");
-      btnGuardar.textContent = activo ? "Guardar cambios" : "Agregar operación";
-      btnCancelar.style.display = activo ? "block" : "none";
+      document.getElementById("btnGuardarOp").textContent         = activo ? "Guardar cambios" : "Agregar operación";
+      document.getElementById("btnCancelarEdicion").style.display = activo ? "block" : "none";
     }
     function agregarOperacion() {
-      const tipo = document.getElementById("tipoOp").value;
-      const VN = parseFloat(document.getElementById("opVN").value || "0");
+      const tipo  = document.getElementById("tipoOp").value;
+      const VN    = parseFloat(document.getElementById("opVN").value || "0");
       const precio = parseFloat(document.getElementById("opPrecio").value);
       if (!isFinite(precio) || !isFinite(VN) || precio <= 0 || VN <= 0) {
-        alert("Ingresá un precio y nominales válidos.");
-        return;
+        mostrarToast("Ingresá un precio y nominales válidos.", "error"); return;
       }
       ultimoVN = VN;
       const derecho = 0.0001;
       const bruto = VN * (precio / 100);
-      const der = bruto * derecho;
-      const neto = tipo === "compra" ? bruto + der : bruto - der;
+      const neto  = tipo === "compra" ? bruto + bruto * derecho : bruto - bruto * derecho;
       const ops = getOperaciones();
       if (editandoOperacionId !== null) {
         const idx = ops.findIndex((op) => op.id === editandoOperacionId);
-        if (idx !== -1) {
-          ops[idx] = { ...ops[idx], tipo, precio, VN, neto };
-        }
+        if (idx !== -1) ops[idx] = { ...ops[idx], tipo, precio, VN, neto };
+        mostrarToast("Operación actualizada", "ok");
       } else {
-        ops.push({
-          id: Date.now(),
-          fecha: new Date().toISOString(),
-          tipo,
-          precio,
-          VN,
-          neto
-        });
+        ops.push({ id: Date.now(), fecha: new Date().toISOString(), tipo, precio, VN, neto });
+        mostrarToast("Operación guardada", "ok");
       }
       saveOperaciones(ops);
       cancelarEdicion();
       renderOperaciones();
-      document.getElementById("opPrecio").focus();
-    }
-    function borrarOperaciones() {
-      if (!confirm("¿Seguro que querés borrar todo el registro diario?")) return;
-      localStorage.removeItem(STORAGE_KEY);
-      cancelarEdicion();
-      renderOperaciones();
-    }
-    function editarOperacion(id) {
-      const op = getOperaciones().find((item) => item.id === id);
-      if (!op) return;
-      editandoOperacionId = id;
-      document.getElementById("tipoOp").value = op.tipo;
-      document.getElementById("opVN").value = String(op.VN);
-      document.getElementById("opPrecio").value = String(op.precio);
-      setModoEdicion(true);
       document.getElementById("opPrecio").focus();
     }
     function cancelarEdicion() {
@@ -621,169 +619,388 @@
       limpiarFormularioOperacion();
       setModoEdicion(false);
     }
-    function borrarOperacion(id) {
-      const ops = getOperaciones();
-      const nuevasOps = ops.filter((op) => op.id !== id);
-      saveOperaciones(nuevasOps);
-      if (editandoOperacionId === id) {
-        cancelarEdicion();
-      }
-      renderOperaciones();
+    function editarOperacion(id) {
+      const op = getOperaciones().find((o) => o.id === id);
+      if (!op) return;
+      editandoOperacionId = id;
+      document.getElementById("tipoOp").value   = op.tipo;
+      document.getElementById("opVN").value     = String(op.VN);
+      document.getElementById("opPrecio").value = String(op.precio);
+      setModoEdicion(true);
+      document.getElementById("opPrecio").focus();
     }
+    function borrarOperacionConUndo(id) {
+      const ops = getOperaciones();
+      const idx = ops.findIndex((op) => op.id === id);
+      if (idx === -1) return;
+      opEliminadaUndo = { op: { ...ops[idx] }, idx };
+      saveOperaciones(ops.filter((op) => op.id !== id));
+      if (editandoOperacionId === id) cancelarEdicion();
+      renderOperaciones();
+      mostrarToast("Operación eliminada", "info", 5000, () => {
+        const current = getOperaciones();
+        current.splice(opEliminadaUndo.idx, 0, opEliminadaUndo.op);
+        saveOperaciones(current);
+        opEliminadaUndo = null;
+        renderOperaciones();
+        mostrarToast("Operación restaurada", "ok");
+      });
+    }
+    function confirmarBorrarTodo() {
+      mostrarModal({
+        titulo: "¿Borrar todo el registro?",
+        msg: "Esta acción eliminará todas las operaciones del día. No se puede deshacer.",
+        labelConfirm: "Borrar todo",
+        onConfirm: () => {
+          localStorage.removeItem(STORAGE_KEY);
+          cancelarEdicion();
+          renderOperaciones();
+          mostrarToast("Registro borrado", "info");
+        }
+      });
+    }
+
+    // ── Exportar TXT (SIN CAMBIOS) ────────────────────────────────────────
     function exportarOperacionesTXT() {
       const ops = getOperaciones();
-      const comprasPendientes = [];
-      const filas = [];
+      const comprasPendientes = [], filas = [];
       for (const op of ops) {
-        if (op.tipo === "compra") {
-          comprasPendientes.push({ precio: op.precio, restante: op.VN });
-          continue;
-        }
+        if (op.tipo === "compra") { comprasPendientes.push({ precio: op.precio, restante: op.VN }); continue; }
         if (op.tipo !== "venta") continue;
         let restanteVenta = op.VN;
         while (restanteVenta > 0 && comprasPendientes.length > 0) {
           const compra = comprasPendientes[0];
           const cantidad = Math.min(restanteVenta, compra.restante);
-          filas.push([
-            fmtMoneyARS(compra.precio),
-            fmtMoneyARS(op.precio),
-            cantidad.toLocaleString("es-AR"),
-            fmtFechaSoloDia(op.fecha)
-          ]);
+          filas.push([fmtMoneyARS(compra.precio), fmtMoneyARS(op.precio), cantidad.toLocaleString("es-AR"), fmtFechaSoloDia(op.fecha)]);
           compra.restante -= cantidad;
-          restanteVenta -= cantidad;
-          if (compra.restante <= 0) {
-            comprasPendientes.shift();
-          }
+          restanteVenta   -= cantidad;
+          if (compra.restante <= 0) comprasPendientes.shift();
         }
-        if (restanteVenta > 0) {
-          filas.push([
-            "",
-            fmtMoneyARS(op.precio),
-            restanteVenta.toLocaleString("es-AR"),
-            fmtFechaSoloDia(op.fecha)
-          ]);
-        }
+        if (restanteVenta > 0)
+          filas.push(["", fmtMoneyARS(op.precio), restanteVenta.toLocaleString("es-AR"), fmtFechaSoloDia(op.fecha)]);
       }
-      if (!filas.length) {
-        alert("No hay operaciones suficientes para exportar en el formato solicitado.");
-        return;
-      }
+      if (!filas.length) { mostrarToast("No hay operaciones suficientes para exportar.", "error", 3000); return; }
       const encabezado = ["Precio de Compra", "Precio de Venta", "Cantidad", "Fecha de la Venta"];
-      const contenido = [encabezado, ...filas].map((fila) => fila.join("\t")).join("\n");
+      const contenido  = [encabezado, ...filas].map((f) => f.join("\t")).join("\n");
       const blob = new Blob([contenido], { type: "text/plain;charset=utf-8" });
-      const enlace = document.createElement("a");
-      enlace.href = URL.createObjectURL(blob);
-      enlace.download = `registro_operaciones_${new Date().toISOString().slice(0, 10)}.txt`;
-      enlace.click();
-      URL.revokeObjectURL(enlace.href);
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `registro_operaciones_${new Date().toISOString().slice(0, 10)}.txt`;
+      a.click();
+      URL.revokeObjectURL(a.href);
     }
-    function initResizableColumns() {
-      const table = document.getElementById("tablaRegistro");
-      const savedWidths = JSON.parse(localStorage.getItem(COL_WIDTHS_KEY) || "{}");
-      for (const [colId, width] of Object.entries(savedWidths)) {
-        const colEl = document.getElementById(`col-${colId}`);
-        if (colEl && Number.isFinite(width)) {
-          colEl.style.width = `${Math.max(70, width)}px`;
-        }
-      }
-      table.querySelectorAll("th.resizable").forEach((th) => {
-        const colId = th.getAttribute("data-col-id");
-        const resizer = th.querySelector(".col-resizer");
-        const colEl = document.getElementById(`col-${colId}`);
-        if (!resizer || !colEl) return;
-        resizer.addEventListener("mousedown", (event) => {
-          event.preventDefault();
-          const startX = event.clientX;
-          const startWidth = colEl.getBoundingClientRect().width;
-          function onMouseMove(moveEvent) {
-            const nextWidth = Math.max(70, startWidth + (moveEvent.clientX - startX));
-            colEl.style.width = `${nextWidth}px`;
-          }
-          function onMouseUp() {
-            document.removeEventListener("mousemove", onMouseMove);
-            document.removeEventListener("mouseup", onMouseUp);
-            const stored = JSON.parse(localStorage.getItem(COL_WIDTHS_KEY) || "{}");
-            stored[colId] = Math.round(colEl.getBoundingClientRect().width);
-            localStorage.setItem(COL_WIDTHS_KEY, JSON.stringify(stored));
-          }
-          document.addEventListener("mousemove", onMouseMove);
-          document.addEventListener("mouseup", onMouseUp);
-        });
+
+    // ── Filtro y sort ─────────────────────────────────────────────────────
+    function setFiltro(f) {
+      filtroTabla = f;
+      document.querySelectorAll(".filtro-chips button").forEach((btn) =>
+        btn.classList.toggle("active", btn.getAttribute("data-filtro") === f));
+      renderOperaciones();
+    }
+    function toggleSort(col) {
+      sortDir = sortCol === col ? -sortDir : 1;
+      sortCol = col;
+      renderOperaciones();
+    }
+    function actualizarSortHeaders() {
+      document.querySelectorAll("th[data-col-id]").forEach((th) => {
+        const col = th.getAttribute("data-col-id");
+        th.classList.toggle("sort-active", col === sortCol);
+        const icon = th.querySelector(".sort-icon");
+        if (icon) icon.textContent = col === sortCol ? (sortDir === 1 ? "↑" : "↓") : "↕";
       });
     }
+
+    // ── Render tabla ──────────────────────────────────────────────────────
     function renderOperaciones() {
-      const ops = getOperaciones();
+      const ops   = getOperaciones();
       const tbody = document.getElementById("tablaOps");
+      const tfoot = document.getElementById("tablaFoot");
       const resumen = document.getElementById("resumenOps");
+
+      let netoCompras = 0, netoVentas = 0, vnCompras = 0, vnVentas = 0, sumaPxVN = 0;
+      for (const op of ops) {
+        if (op.tipo === "compra") { netoCompras += op.neto; vnCompras += op.VN; sumaPxVN += op.precio * op.VN; }
+        else                     { netoVentas  += op.neto; vnVentas  += op.VN; }
+      }
+
       if (!ops.length) {
         tbody.innerHTML = `<tr><td colspan="6" class="muted">Sin operaciones</td></tr>`;
+        tfoot.innerHTML = "";
         resumen.innerHTML = "Todavía no hay operaciones cargadas.";
+        renderEstadoSesion(ops);
         return;
       }
-      let netoCompras = 0;
-      let netoVentas = 0;
-      let vnCompras = 0;
-      let vnVentas = 0;
-      let sumaPrecioPorVNCompras = 0;
-      tbody.innerHTML = ops.map((op) => {
-        if (op.tipo === "compra") {
-          netoCompras += op.neto;
-          vnCompras += op.VN;
-          sumaPrecioPorVNCompras += op.precio * op.VN;
-        } else {
-          netoVentas += op.neto;
-          vnVentas += op.VN;
-        }
-        const fechaFmt = fmtFechaSoloDia(op.fecha);
-        const tipoEmoji = op.tipo === "compra" ? "🟢 Compra" : "🔵 Venta";
+
+      let visible = filtroTabla === "todo" ? [...ops] : ops.filter((op) => op.tipo === filtroTabla);
+      if (sortCol) {
+        visible.sort((a, b) => {
+          const va = sortCol === "fecha" ? a.fecha : sortCol === "tipo" ? a.tipo : sortCol === "precio" ? a.precio : sortCol === "vn" ? a.VN : a.neto;
+          const vb = sortCol === "fecha" ? b.fecha : sortCol === "tipo" ? b.tipo : sortCol === "precio" ? b.precio : sortCol === "vn" ? b.VN : b.neto;
+          return va < vb ? -sortDir : va > vb ? sortDir : 0;
+        });
+      }
+      actualizarSortHeaders();
+
+      let totalVN = 0, totalNeto = 0;
+      tbody.innerHTML = visible.map((op) => {
+        totalVN   += op.VN;
+        totalNeto += op.neto;
         return `<tr>
-          <td>${fechaFmt}</td>
-          <td>${tipoEmoji}</td>
+          <td>${fmtFechaHora(op.fecha)}</td>
+          <td>${op.tipo === "compra" ? "🟢 Compra" : "🔵 Venta"}</td>
           <td>$ ${fmtMoneyARS(op.precio)}</td>
           <td>${op.VN.toLocaleString("es-AR")}</td>
           <td>$ ${fmtMoneyARS(op.neto)}</td>
           <td class="action-cell">
             <div class="action-buttons">
-              <button class="btn-icon btn-edit" type="button" title="Editar operación" onclick="editarOperacion(${op.id})">✎</button>
-              <button class="btn-icon btn-delete" type="button" title="Eliminar operación" onclick="borrarOperacion(${op.id})">✖</button>
+              <button class="btn-icon btn-edit"   title="Editar"   onclick="editarOperacion(${op.id})">✎</button>
+              <button class="btn-icon btn-delete" title="Eliminar" onclick="borrarOperacionConUndo(${op.id})">✖</button>
             </div>
           </td>
         </tr>`;
       }).join("");
-      const gananciaTotal = netoVentas - netoCompras;
-      const cls = gananciaTotal >= 0 ? "ok" : "bad";
-      const precioPromedioCompra = vnCompras > 0 ? (sumaPrecioPorVNCompras / vnCompras) : 0;
-      const nominalesNetos = vnCompras - vnVentas;
+
+      tfoot.innerHTML = `<tr>
+        <td colspan="3">Totales (${visible.length} filas)</td>
+        <td>${totalVN.toLocaleString("es-AR")}</td>
+        <td>$ ${fmtMoneyARS(totalNeto)}</td>
+        <td></td>
+      </tr>`;
+
+      const gan = netoVentas - netoCompras;
+      const cls = gan >= 0 ? "ok" : "bad";
+      const promC = vnCompras > 0 ? sumaPxVN / vnCompras : 0;
       resumen.innerHTML =
         `<b>Total compras (neto):</b> $ ${fmtMoneyARS(netoCompras)}<br>` +
         `<b>Total ventas (neto):</b> $ ${fmtMoneyARS(netoVentas)}<br>` +
-        `<b class="${cls}">Resultado acumulado:</b> <b class="${cls}">$ ${fmtMoneyARS(gananciaTotal)}</b><br>` +
+        `<b class="${cls}">Resultado acumulado:</b> <b class="${cls}">$ ${fmtMoneyARS(gan)}</b><br>` +
         `<b>Nominales comprados:</b> ${vnCompras.toLocaleString("es-AR")}<br>` +
         `<b>Nominales vendidos:</b> ${vnVentas.toLocaleString("es-AR")}<br>` +
-        `<b>Posición neta (compras - ventas):</b> ${nominalesNetos.toLocaleString("es-AR")}<br>` +
-        `<b>Precio promedio de compra:</b> $ ${fmtMoneyARS(precioPromedioCompra)}`;
+        `<b>Posición neta (compras - ventas):</b> ${(vnCompras - vnVentas).toLocaleString("es-AR")}<br>` +
+        `<b>Precio promedio de compra:</b> $ ${fmtMoneyARS(promC)}`;
+
+      renderEstadoSesion(ops);
     }
-    function initAtajosTeclado() {
-      document.addEventListener("keydown", (event) => {
-        const tag = document.activeElement ? document.activeElement.tagName : "";
-        if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA") return;
-        if (event.key === "c" || event.key === "C") {
-          document.getElementById("tipoOp").value = "compra";
-          document.getElementById("opPrecio").focus();
-        } else if (event.key === "v" || event.key === "V") {
-          document.getElementById("tipoOp").value = "venta";
-          document.getElementById("opPrecio").focus();
+
+    // ── Estado de la sesión ───────────────────────────────────────────────
+    function calcularSesgo(ops) {
+      const vnC = ops.filter(o => o.tipo === "compra").reduce((s, o) => s + o.VN, 0);
+      const vnV = ops.filter(o => o.tipo === "venta").reduce((s, o) => s + o.VN, 0);
+      const total = vnC + vnV;
+      if (!total) return { label: "—", colorClass: "sesgo-neutral", ratio: 0, sub: "Sin operaciones", vnC: 0, vnV: 0 };
+      const ratio = Math.abs(vnC - vnV) / total;
+      const cat = ratio < 0.05 ? "neutral" : ratio < 0.30 ? "leve" : ratio < 0.60 ? "moderado" : "fuerte";
+      if (ratio < 0.05) return { label: "NEUTRAL", colorClass: "sesgo-neutral", ratio, sub: `${cat} · ${(ratio*100).toFixed(1)}% · C: ${vnC.toLocaleString("es-AR")} / V: ${vnV.toLocaleString("es-AR")}`, vnC, vnV };
+      const esLong = vnC >= vnV;
+      return {
+        label: esLong ? "LONG" : "SHORT",
+        colorClass: esLong ? "sesgo-long" : "sesgo-short",
+        ratio, vnC, vnV,
+        sub: `${cat} · ${(ratio*100).toFixed(1)}% · C: ${vnC.toLocaleString("es-AR")} / V: ${vnV.toLocaleString("es-AR")}`
+      };
+    }
+
+    function calcularMetricasSesion(ops) {
+      const compras = ops.filter(o => o.tipo === "compra");
+      const ventas  = ops.filter(o => o.tipo === "venta");
+      const vnC = compras.reduce((s, o) => s + o.VN, 0);
+      const vnV = ventas.reduce((s, o)  => s + o.VN, 0);
+      const promC = vnC > 0 ? compras.reduce((s, o) => s + o.precio * o.VN, 0) / vnC : 0;
+      const promV = vnV > 0 ? ventas.reduce((s, o)  => s + o.precio * o.VN, 0) / vnV : 0;
+      const mejorCompra = compras.length ? Math.min(...compras.map(o => o.precio)) : null;
+      const mejorVenta  = ventas.length  ? Math.max(...ventas.map(o  => o.precio)) : null;
+      // Resultado FIFO
+      const pendientes = compras.map(o => ({ netoUnit: o.neto / o.VN, restante: o.VN }));
+      let resultado = 0;
+      for (const v of ventas) {
+        let rest = v.VN, netoUnitV = v.neto / v.VN;
+        while (rest > 0 && pendientes.length > 0) {
+          const c = pendientes[0], qty = Math.min(rest, c.restante);
+          resultado += (netoUnitV - c.netoUnit) * qty;
+          c.restante -= qty; rest -= qty;
+          if (c.restante <= 0) pendientes.shift();
+        }
+      }
+      return { nc: compras.length, nv: ventas.length, total: ops.length,
+               vnC, vnV, promC, promV,
+               spread: (promC > 0 && promV > 0) ? promV - promC : null,
+               mejorCompra, mejorVenta, resultado };
+    }
+
+    function renderEstadoSesion(ops) {
+      const badge  = document.getElementById("sesgo-badge");
+      const labelEl = document.getElementById("sesgo-label");
+      const subEl  = document.getElementById("sesgo-sub");
+      const grid   = document.getElementById("metricas-grid");
+      if (!ops || !ops.length) {
+        badge.className = "sesgo-badge sesgo-neutral";
+        labelEl.textContent = "—"; labelEl.style.color = "";
+        subEl.textContent = "Sin operaciones";
+        grid.innerHTML = ""; return;
+      }
+      const s = calcularSesgo(ops);
+      badge.className = `sesgo-badge ${s.colorClass}`;
+      labelEl.textContent = s.label;
+      labelEl.style.color = s.label === "LONG" ? "var(--green)" : s.label === "SHORT" ? "var(--red)" : "var(--muted)";
+      subEl.textContent = s.sub;
+      const m = calcularMetricasSesion(ops);
+      const clsR = m.resultado >= 0 ? "ok" : "bad";
+      const items = [
+        { l: "Operaciones",  v: `${m.total} (${m.nc}C / ${m.nv}V)`, c: "" },
+        { l: "Volumen VN",   v: (m.vnC + m.vnV).toLocaleString("es-AR"), c: "" },
+        { l: "Prom. compra", v: m.promC > 0 ? `$ ${fmtMoneyARS(m.promC)}` : "—", c: "" },
+        { l: "Prom. venta",  v: m.promV > 0 ? `$ ${fmtMoneyARS(m.promV)}` : "—", c: "" },
+        { l: "Spread prom.", v: m.spread !== null ? m.spread.toFixed(2) : "—", c: m.spread !== null ? (m.spread >= 0 ? "ok" : "bad") : "" },
+        { l: "Mejor compra", v: m.mejorCompra !== null ? `$ ${fmtMoneyARS(m.mejorCompra)}` : "—", c: "ok" },
+        { l: "Mejor venta",  v: m.mejorVenta  !== null ? `$ ${fmtMoneyARS(m.mejorVenta)}`  : "—", c: "ok" },
+        { l: "Resultado",    v: `$ ${fmtMoneyARS(m.resultado)}`, c: clsR },
+      ];
+      grid.innerHTML = items.map(({ l, v, c }) =>
+        `<div class="metrica-item"><div class="metrica-label">${l}</div><div class="metrica-valor ${c}">${v}</div></div>`
+      ).join("");
+      const wrap = document.getElementById("grafico-sesion-wrap");
+      if (wrap.style.display !== "none")
+        renderGraficoSesion(document.getElementById("chartSesion"), ops);
+    }
+
+    let graficoSesionVisible = false;
+    function toggleGraficoSesion() {
+      graficoSesionVisible = !graficoSesionVisible;
+      const wrap = document.getElementById("grafico-sesion-wrap");
+      wrap.style.display = graficoSesionVisible ? "block" : "none";
+      if (graficoSesionVisible) renderGraficoSesion(document.getElementById("chartSesion"), getOperaciones());
+    }
+
+    function renderGraficoSesion(svg, ops) {
+      if (!ops || !ops.length) { svg.innerHTML = ""; return; }
+      const W = 560, H = 260, pL = 68, pR = 14, pT = 20, pB = 38;
+      const plotW = W - pL - pR, plotH = H - pT - pB;
+      const precios = ops.map(o => o.precio);
+      const minY = Math.min(...precios), maxY = Math.max(...precios);
+      const ySpan = maxY - minY || 1;
+      const xToPx = (i) => pL + (i / Math.max(ops.length - 1, 1)) * plotW;
+      const yToPx = (y) => pT + (1 - (y - minY) / ySpan) * plotH;
+
+      const compras = ops.filter(o => o.tipo === "compra");
+      const ventas  = ops.filter(o => o.tipo === "venta");
+      const vnC = compras.reduce((s, o) => s + o.VN, 0);
+      const vnV = ventas.reduce((s, o) => s + o.VN, 0);
+      const promC = vnC > 0 ? compras.reduce((s, o) => s + o.precio * o.VN, 0) / vnC : null;
+      const promV = vnV > 0 ? ventas.reduce((s, o)  => s + o.precio * o.VN, 0) / vnV : null;
+
+      let lineaC = "", lineaV = "";
+      if (promC !== null) {
+        const y = yToPx(promC);
+        lineaC = `<line x1="${pL}" y1="${y}" x2="${W - pR}" y2="${y}" stroke="#10b981" stroke-width="1" stroke-dasharray="4 3" />
+          <text x="${pL + 4}" y="${y - 4}" font-size="9" fill="#10b981">prom C: ${fmtMoneyARS(promC)}</text>`;
+      }
+      if (promV !== null) {
+        const y = yToPx(promV);
+        lineaV = `<line x1="${pL}" y1="${y}" x2="${W - pR}" y2="${y}" stroke="#ef4444" stroke-width="1" stroke-dasharray="4 3" />
+          <text x="${pL + 4}" y="${y - 4}" font-size="9" fill="#ef4444">prom V: ${fmtMoneyARS(promV)}</text>`;
+      }
+
+      const maxVN = Math.max(...ops.map(o => o.VN));
+      const hitAreas = [];
+      let puntos = "";
+      ops.forEach((op, i) => {
+        const x = xToPx(i), y = yToPx(op.precio);
+        const r = 5 + (op.VN / maxVN) * 7;
+        const color = op.tipo === "compra" ? "#10b981" : "#ef4444";
+        puntos += op.tipo === "compra"
+          ? `<polygon points="${x},${y-r} ${x-r},${y+r} ${x+r},${y+r}" fill="${color}" stroke="#0a0f1c" stroke-width="1" />`
+          : `<polygon points="${x},${y+r} ${x-r},${y-r} ${x+r},${y-r}" fill="${color}" stroke="#0a0f1c" stroke-width="1" />`;
+        hitAreas.push({ x, y, idx: i });
+      });
+
+      let yGrid = "", yLabels = "", xLabels = "";
+      for (let i = 0; i <= 4; i++) {
+        const t = i / 4, yVal = maxY - t * ySpan, yPx = pT + t * plotH;
+        yGrid   += `<line x1="${pL}" y1="${yPx}" x2="${W-pR}" y2="${yPx}" stroke="#1e293b" stroke-width="1" />`;
+        yLabels += `<text x="${pL-5}" y="${yPx+4}" font-size="9" fill="#94a3b8" text-anchor="end">${Math.round(yVal)}</text>`;
+      }
+      ops.forEach((op, i) => {
+        if (i % Math.max(1, Math.floor(ops.length / 6)) === 0 || i === ops.length - 1) {
+          const hora = new Date(op.fecha).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
+          xLabels += `<text x="${xToPx(i)}" y="${H - 5}" font-size="9" fill="#94a3b8" text-anchor="middle">${hora}</text>`;
         }
       });
+
+      svg.innerHTML = `
+        <line x1="${pL}" y1="${pT}" x2="${pL}" y2="${H-pB}" stroke="#64748b" />
+        <line x1="${pL}" y1="${H-pB}" x2="${W-pR}" y2="${H-pB}" stroke="#64748b" />
+        ${yGrid}${lineaC}${lineaV}${puntos}${xLabels}${yLabels}`;
+
+      const tooltip = document.getElementById("tooltipSesion");
+      svg.onmousemove = (event) => {
+        const rect = svg.getBoundingClientRect();
+        const mx = (event.clientX - rect.left) * (W / rect.width);
+        const my = (event.clientY - rect.top)  * (H / rect.height);
+        let mejor = null, mejorDist = 25;
+        for (const h of hitAreas) {
+          const d = Math.hypot(mx - h.x, my - h.y);
+          if (d < mejorDist) { mejorDist = d; mejor = h; }
+        }
+        if (mejor !== null) {
+          const op = ops[mejor.idx];
+          const hora = new Date(op.fecha).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
+          tooltip.innerHTML = `<b>${op.tipo === "compra" ? "🟢 Compra" : "🔵 Venta"}</b> · ${hora} · Precio: $ ${fmtMoneyARS(op.precio)} · VN: ${op.VN.toLocaleString("es-AR")}`;
+        } else {
+          tooltip.innerHTML = "Pasá el mouse sobre un punto para ver el detalle.";
+        }
+      };
+      svg.onmouseleave = () => { tooltip.innerHTML = "Pasá el mouse sobre un punto para ver el detalle."; };
     }
+
+    // ── Columnas redimensionables ─────────────────────────────────────────
+    function initResizableColumns() {
+      const table = document.getElementById("tablaRegistro");
+      const saved = JSON.parse(localStorage.getItem(COL_WIDTHS_KEY) || "{}");
+      for (const [colId, w] of Object.entries(saved)) {
+        const el = document.getElementById(`col-${colId}`);
+        if (el && Number.isFinite(w)) el.style.width = `${Math.max(70, w)}px`;
+      }
+      table.querySelectorAll("th.resizable").forEach((th) => {
+        const colId  = th.getAttribute("data-col-id");
+        const resizer = th.querySelector(".col-resizer");
+        const colEl  = document.getElementById(`col-${colId}`);
+        if (!resizer || !colEl) return;
+        resizer.addEventListener("mousedown", (e) => {
+          e.preventDefault();
+          const startX = e.clientX, startW = colEl.getBoundingClientRect().width;
+          const onMove = (ev) => { colEl.style.width = `${Math.max(70, startW + (ev.clientX - startX))}px`; };
+          const onUp   = () => {
+            document.removeEventListener("mousemove", onMove);
+            document.removeEventListener("mouseup", onUp);
+            const s = JSON.parse(localStorage.getItem(COL_WIDTHS_KEY) || "{}");
+            s[colId] = Math.round(colEl.getBoundingClientRect().width);
+            localStorage.setItem(COL_WIDTHS_KEY, JSON.stringify(s));
+          };
+          document.addEventListener("mousemove", onMove);
+          document.addEventListener("mouseup", onUp);
+        });
+      });
+    }
+
+    // ── Atajos de teclado ─────────────────────────────────────────────────
+    function initAtajosTeclado() {
+      document.addEventListener("keydown", (e) => {
+        const tag    = document.activeElement ? document.activeElement.tagName : "";
+        const enInput = tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA";
+        if (e.key === "Escape") { cancelarEdicion(); return; }
+        if (enInput) return;
+        if (e.key === "c" || e.key === "C") { document.getElementById("tipoOp").value = "compra"; document.getElementById("opPrecio").focus(); }
+        else if (e.key === "v" || e.key === "V") { document.getElementById("tipoOp").value = "venta";  document.getElementById("opPrecio").focus(); }
+      });
+    }
+
+    // ── Init ──────────────────────────────────────────────────────────────
     initResizableColumns();
     renderOperaciones();
     initAtajosTeclado();
     document.getElementById("opPrecio").focus();
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("./sw.js");
-    }
+    if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js");
   </script>
 </body>
 </html>
