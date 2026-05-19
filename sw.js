@@ -1,5 +1,5 @@
 // ✅ Subí esta versión cada vez que actualices tu app (v4, v5, etc.)
-const CACHE_NAME = "caucion-app-v4";
+const CACHE_NAME = "caucion-app-pro-v5";
 
 // Archivos que querés cachear para offline
 const ASSETS = [
