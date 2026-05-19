@@ -234,7 +234,7 @@
         </div>
       </div>
       <label>Precio</label>
-      <input type="number" id="opPrecio" placeholder="Ej: 88000">
+      <input type="number" id="opPrecio" placeholder="Ej: 88000" onkeydown="if(event.key==='Enter') agregarOperacion()">
       <button id="btnGuardarOp" onclick="agregarOperacion()">Agregar operación</button>
       <button id="btnCancelarEdicion" class="btn-secondary" style="display:none" onclick="cancelarEdicion()">Cancelar edición</button>
       <button class="btn-secondary" onclick="exportarOperacionesTXT()">Exportar TXT</button>
@@ -540,6 +540,7 @@
     const STORAGE_KEY = "caucion_operaciones_diarias";
     const COL_WIDTHS_KEY = "caucion_table_col_widths";
     let editandoOperacionId = null;
+    let ultimoVN = 0;
     function fmtFechaSoloDia(fechaISO) {
       return new Date(fechaISO).toLocaleDateString("es-AR");
     }
@@ -557,7 +558,7 @@
     function limpiarFormularioOperacion() {
       document.getElementById("tipoOp").value = "compra";
       document.getElementById("opPrecio").value = "";
-      document.getElementById("opVN").value = "0";
+      document.getElementById("opVN").value = ultimoVN > 0 ? String(ultimoVN) : "0";
     }
     function setModoEdicion(activo) {
       const btnGuardar = document.getElementById("btnGuardarOp");
@@ -573,6 +574,7 @@
         alert("Ingresá un precio y nominales válidos.");
         return;
       }
+      ultimoVN = VN;
       const derecho = 0.0001;
       const bruto = VN * (precio / 100);
       const der = bruto * derecho;
@@ -596,6 +598,7 @@
       saveOperaciones(ops);
       cancelarEdicion();
       renderOperaciones();
+      document.getElementById("opPrecio").focus();
     }
     function borrarOperaciones() {
       if (!confirm("¿Seguro que querés borrar todo el registro diario?")) return;
@@ -761,8 +764,23 @@
         `<b>Posición neta (compras - ventas):</b> ${nominalesNetos.toLocaleString("es-AR")}<br>` +
         `<b>Precio promedio de compra:</b> $ ${fmtMoneyARS(precioPromedioCompra)}`;
     }
+    function initAtajosTeclado() {
+      document.addEventListener("keydown", (event) => {
+        const tag = document.activeElement ? document.activeElement.tagName : "";
+        if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA") return;
+        if (event.key === "c" || event.key === "C") {
+          document.getElementById("tipoOp").value = "compra";
+          document.getElementById("opPrecio").focus();
+        } else if (event.key === "v" || event.key === "V") {
+          document.getElementById("tipoOp").value = "venta";
+          document.getElementById("opPrecio").focus();
+        }
+      });
+    }
     initResizableColumns();
     renderOperaciones();
+    initAtajosTeclado();
+    document.getElementById("opPrecio").focus();
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("./sw.js");
     }
