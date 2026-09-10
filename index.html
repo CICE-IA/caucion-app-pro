@@ -319,6 +319,20 @@
           <div class="muted" id="tooltipSesion">Pasá el mouse sobre un punto para ver el detalle.</div>
         </div>
       </div>
+
+      <div class="card">
+        <h1>Calculadora de Acciones</h1>
+        <label>Precio Compra (A)</label>
+        <input type="number" id="accA" placeholder="Ej: 7085">
+        <label>Precio Venta (B)</label>
+        <input type="number" id="accB" placeholder="Ej: 7200">
+        <label>Cantidad (unidades)</label>
+        <input type="number" id="accC" value="1" placeholder="Ej: 10"
+          onkeydown="if(event.key==='Enter') calcularAcciones()">
+        <button onclick="calcularAcciones()">Calcular</button>
+        <div class="result" id="outAcciones">Ingresá valores para calcular.</div>
+        <div class="muted">Derecho de mercado: 0,05% + IVA 21% (= 0,0605%) sobre el bruto.</div>
+      </div>
     </div>
 
     <!-- FILA COMPLETA — Módulo de Ganancia -->
@@ -990,6 +1004,38 @@
         `<div class="hr"></div>` +
         `<b>Costo efectivo de compra:</b> $ ${fmtMoneyARS(costoEfectivo)}<br>` +
         `<b class="ok">Valor de venta break-even:</b> <b class="ok">$ ${fmtMoneyARS(breakEven)}</b>`;
+    }
+
+    // ── Calculadora de Acciones ───────────────────────────────────────────
+    function calcularAcciones() {
+      const A = parseFloat(document.getElementById("accA").value);
+      const B = parseFloat(document.getElementById("accB").value);
+      const C = parseFloat(document.getElementById("accC").value || "1");
+      if (!isFinite(A) || !isFinite(B) || A <= 0 || C <= 0) {
+        document.getElementById("outAcciones").innerHTML = "Ingresá valores válidos. (A > 0 y Cantidad > 0)";
+        return;
+      }
+      const derecho = 0.000605;                    // 0,05% × 1,21 IVA
+      const brutoC  = C * A;
+      const comC    = brutoC * derecho;
+      const netoC   = brutoC + comC;
+      const brutoV  = C * B;
+      const comV    = brutoV * derecho;
+      const netoV   = brutoV - comV;
+      const ganancia = netoV - netoC;
+      const cls = ganancia >= 0 ? "ok" : "bad";
+      document.getElementById("outAcciones").innerHTML =
+        `<b>🟢 Compra</b><br>` +
+        `Importe bruto: $ ${fmtMoneyARS(brutoC)}<br>` +
+        `Comisión (0,0605%): $ ${fmtMoneyARS(comC)}<br>` +
+        `<b>Costo neto compra:</b> $ ${fmtMoneyARS(netoC)}<br>` +
+        `<div class="hr"></div>` +
+        `<b>🔵 Venta</b><br>` +
+        `Importe bruto: $ ${fmtMoneyARS(brutoV)}<br>` +
+        `Comisión (0,0605%): $ ${fmtMoneyARS(comV)}<br>` +
+        `<b>Ingreso neto venta:</b> $ ${fmtMoneyARS(netoV)}<br>` +
+        `<div class="hr"></div>` +
+        `<b class="${cls}">💰 Ganancia neta:</b> <b class="${cls}">$ ${fmtMoneyARS(ganancia)}</b>`;
     }
 
     // ── Columnas redimensionables ─────────────────────────────────────────
