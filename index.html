@@ -221,6 +221,16 @@
         <button onclick="calcularShortLong()">Calcular Short / Long</button>
         <div class="result" id="outShortLong">Ingresá un precio base para calcular.</div>
       </div>
+
+      <div class="card">
+        <h1>Stop-Loss Acciones</h1>
+        <label>Precio de compra</label>
+        <input type="number" id="precioAccion" placeholder="Ej: 7085"
+          onkeydown="if(event.key==='Enter') calcularStopLossAccion()">
+        <div class="muted">Comisión: 0,05% + IVA 21% (cantidad = 1).</div>
+        <button onclick="calcularStopLossAccion()">Calcular</button>
+        <div class="result" id="outAccion">Ingresá un precio de compra para calcular.</div>
+      </div>
     </div>
 
     <!-- COLUMNA CENTRAL -->
@@ -236,10 +246,15 @@
             </select>
           </div>
           <div>
-            <label>Nominales</label>
-            <input type="number" id="opVN" value="0" placeholder="Ej: 20000">
+            <label>Instrumento</label>
+            <select id="opInstrumento">
+              <option value="bono">Bono</option>
+              <option value="accion">Acción</option>
+            </select>
           </div>
         </div>
+        <label>Nominales</label>
+        <input type="number" id="opVN" value="0" placeholder="Ej: 20000">
         <label>Precio</label>
         <input type="number" id="opPrecio" placeholder="Ej: 88000"
           onkeydown="if(event.key==='Enter') agregarOperacion()">
@@ -581,32 +596,37 @@
 
     // ── Formulario ────────────────────────────────────────────────────────
     function limpiarFormularioOperacion() {
-      document.getElementById("tipoOp").value  = "compra";
-      document.getElementById("opPrecio").value = "";
-      document.getElementById("opVN").value     = ultimoVN > 0 ? String(ultimoVN) : "0";
+      document.getElementById("tipoOp").value       = "compra";
+      document.getElementById("opInstrumento").value = "bono";
+      document.getElementById("opPrecio").value      = "";
+      document.getElementById("opVN").value          = ultimoVN > 0 ? String(ultimoVN) : "0";
     }
     function setModoEdicion(activo) {
       document.getElementById("btnGuardarOp").textContent         = activo ? "Guardar cambios" : "Agregar operación";
       document.getElementById("btnCancelarEdicion").style.display = activo ? "block" : "none";
     }
     function agregarOperacion() {
-      const tipo  = document.getElementById("tipoOp").value;
-      const VN    = parseFloat(document.getElementById("opVN").value || "0");
-      const precio = parseFloat(document.getElementById("opPrecio").value);
+      const tipo        = document.getElementById("tipoOp").value;
+      const instrumento = document.getElementById("opInstrumento").value;
+      const VN          = parseFloat(document.getElementById("opVN").value || "0");
+      const precio      = parseFloat(document.getElementById("opPrecio").value);
       if (!isFinite(precio) || !isFinite(VN) || precio <= 0 || VN <= 0) {
         mostrarToast("Ingresá un precio y nominales válidos.", "error"); return;
       }
       ultimoVN = VN;
-      const derecho = 0.0001;
-      const bruto = VN * (precio / 100);
-      const neto  = tipo === "compra" ? bruto + bruto * derecho : bruto - bruto * derecho;
+      // Bono: precio cotiza por $100 VN, derecho 0,01%
+      // Acción: precio por unidad, derecho 0,05% + IVA 21%
+      const esAccion = instrumento === "accion";
+      const derecho  = esAccion ? 0.000605 : 0.0001;
+      const bruto    = esAccion ? VN * precio : VN * (precio / 100);
+      const neto     = tipo === "compra" ? bruto + bruto * derecho : bruto - bruto * derecho;
       const ops = getOperaciones();
       if (editandoOperacionId !== null) {
         const idx = ops.findIndex((op) => op.id === editandoOperacionId);
-        if (idx !== -1) ops[idx] = { ...ops[idx], tipo, precio, VN, neto };
+        if (idx !== -1) ops[idx] = { ...ops[idx], tipo, instrumento, precio, VN, neto };
         mostrarToast("Operación actualizada", "ok");
       } else {
-        ops.push({ id: Date.now(), fecha: new Date().toISOString(), tipo, precio, VN, neto });
+        ops.push({ id: Date.now(), fecha: new Date().toISOString(), tipo, instrumento, precio, VN, neto });
         mostrarToast("Operación guardada", "ok");
       }
       saveOperaciones(ops);
@@ -623,9 +643,10 @@
       const op = getOperaciones().find((o) => o.id === id);
       if (!op) return;
       editandoOperacionId = id;
-      document.getElementById("tipoOp").value   = op.tipo;
-      document.getElementById("opVN").value     = String(op.VN);
-      document.getElementById("opPrecio").value = String(op.precio);
+      document.getElementById("tipoOp").value        = op.tipo;
+      document.getElementById("opInstrumento").value  = op.instrumento || "bono";
+      document.getElementById("opVN").value           = String(op.VN);
+      document.getElementById("opPrecio").value       = String(op.precio);
       setModoEdicion(true);
       document.getElementById("opPrecio").focus();
     }
@@ -748,7 +769,7 @@
         totalNeto += op.neto;
         return `<tr>
           <td>${fmtFechaHora(op.fecha)}</td>
-          <td>${op.tipo === "compra" ? "🟢 Compra" : "🔵 Venta"}</td>
+          <td>${op.tipo === "compra" ? "🟢 Compra" : "🔵 Venta"}${op.instrumento === "accion" ? " <span class='pill'>Acc</span>" : ""}</td>
           <td>$ ${fmtMoneyARS(op.precio)}</td>
           <td>${op.VN.toLocaleString("es-AR")}</td>
           <td>$ ${fmtMoneyARS(op.neto)}</td>
@@ -810,7 +831,6 @@
       const promV = vnV > 0 ? ventas.reduce((s, o)  => s + o.precio * o.VN, 0) / vnV : 0;
       const mejorCompra = compras.length ? Math.min(...compras.map(o => o.precio)) : null;
       const mejorVenta  = ventas.length  ? Math.max(...ventas.map(o  => o.precio)) : null;
-      // Resultado FIFO
       const pendientes = compras.map(o => ({ netoUnit: o.neto / o.VN, restante: o.VN }));
       let resultado = 0;
       for (const v of ventas) {
@@ -951,6 +971,25 @@
         }
       };
       svg.onmouseleave = () => { tooltip.innerHTML = "Pasá el mouse sobre un punto para ver el detalle."; };
+    }
+
+    // ── Calculadora Stop-Loss Acciones ────────────────────────────────────
+    function calcularStopLossAccion() {
+      const precio = parseFloat(document.getElementById("precioAccion").value);
+      if (!isFinite(precio) || precio <= 0) {
+        document.getElementById("outAccion").innerHTML = "Ingresá un precio válido.";
+        return;
+      }
+      const derechoRate   = 0.000605;          // 0,05% × 1,21
+      const comision      = precio * derechoRate;
+      const costoEfectivo = precio + comision;
+      const breakEven     = costoEfectivo / (1 - derechoRate);
+      document.getElementById("outAccion").innerHTML =
+        `<b>Precio de compra:</b> $ ${fmtMoneyARS(precio)}<br>` +
+        `<b>Comisión total (0,05% + IVA 21%):</b> $ ${fmtMoneyARS(comision)}<br>` +
+        `<div class="hr"></div>` +
+        `<b>Costo efectivo de compra:</b> $ ${fmtMoneyARS(costoEfectivo)}<br>` +
+        `<b class="ok">Valor de venta break-even:</b> <b class="ok">$ ${fmtMoneyARS(breakEven)}</b>`;
     }
 
     // ── Columnas redimensionables ─────────────────────────────────────────
