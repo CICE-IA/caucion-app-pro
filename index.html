@@ -167,6 +167,11 @@
     .metrica-item { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
     .metrica-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
     .metrica-valor { font-size: 13px; font-weight: bold; margin-top: 2px; }
+    .desglose-bloque { margin-top: 8px; border: 1px solid var(--border); border-radius: 8px; padding: 10px; background: var(--bg); }
+    .desglose-titulo { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: bold; border-bottom: 1px solid var(--border); padding-bottom: 5px; margin-bottom: 6px; }
+    .desglose-row { display: flex; justify-content: space-between; font-size: 12px; padding: 2px 0; }
+    .desglose-label { color: var(--muted); }
+    .desglose-val { font-weight: bold; }
 
     /* SVG */
     .svg-wrapper { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-top: 10px; }
@@ -310,7 +315,8 @@
           <div class="sesgo-sub"   id="sesgo-sub">Sin operaciones</div>
         </div>
         <div class="metricas-grid" id="metricas-grid"></div>
-        <button onclick="toggleGraficoSesion()">Ver gráfico de sesión</button>
+        <div id="desglose-instrumento"></div>
+        <button onclick="toggleGraficoSesion()" style="margin-top:10px">Ver gráfico de sesión</button>
         <div id="grafico-sesion-wrap" style="display:none">
           <div class="svg-wrapper">
             <svg id="chartSesion" viewBox="0 0 560 260"
@@ -871,7 +877,9 @@
         badge.className = "sesgo-badge sesgo-neutral";
         labelEl.textContent = "—"; labelEl.style.color = "";
         subEl.textContent = "Sin operaciones";
-        grid.innerHTML = ""; return;
+        grid.innerHTML = "";
+        document.getElementById("desglose-instrumento").innerHTML = "";
+        return;
       }
       const s = calcularSesgo(ops);
       badge.className = `sesgo-badge ${s.colorClass}`;
@@ -893,6 +901,45 @@
       grid.innerHTML = items.map(({ l, v, c }) =>
         `<div class="metrica-item"><div class="metrica-label">${l}</div><div class="metrica-valor ${c}">${v}</div></div>`
       ).join("");
+
+      // Desglose por instrumento
+      const grupos = [
+        { key: "bono",   label: "Bonos" },
+        { key: "accion", label: "Acciones" }
+      ];
+      let desgloseHTML = "";
+      let totalNetC = 0, totalNetV = 0;
+      for (const { key, label } of grupos) {
+        const g = ops.filter(o => (o.instrumento || "bono") === key);
+        if (!g.length) continue;
+        const c = g.filter(o => o.tipo === "compra");
+        const v = g.filter(o => o.tipo === "venta");
+        const netC = c.reduce((s, o) => s + o.neto, 0);
+        const netV = v.reduce((s, o) => s + o.neto, 0);
+        const res  = netV - netC;
+        const cls  = res >= 0 ? "ok" : "bad";
+        totalNetC += netC; totalNetV += netV;
+        desgloseHTML += `
+          <div class="desglose-bloque">
+            <div class="desglose-titulo">${label} &nbsp;·&nbsp; ${c.length}C / ${v.length}V</div>
+            <div class="desglose-row"><span class="desglose-label">Compras (neto)</span><span class="desglose-val">$ ${fmtMoneyARS(netC)}</span></div>
+            <div class="desglose-row"><span class="desglose-label">Ventas (neto)</span><span class="desglose-val">$ ${fmtMoneyARS(netV)}</span></div>
+            <div class="desglose-row"><span class="desglose-label">Resultado</span><span class="desglose-val ${cls}">$ ${fmtMoneyARS(res)}</span></div>
+          </div>`;
+      }
+      if (desgloseHTML) {
+        const totalRes = totalNetV - totalNetC;
+        const clsT = totalRes >= 0 ? "ok" : "bad";
+        desgloseHTML += `
+          <div class="desglose-bloque" style="border-color:var(--primary);margin-top:6px">
+            <div class="desglose-titulo" style="color:var(--primary)">Total general</div>
+            <div class="desglose-row"><span class="desglose-label">Compras (neto)</span><span class="desglose-val">$ ${fmtMoneyARS(totalNetC)}</span></div>
+            <div class="desglose-row"><span class="desglose-label">Ventas (neto)</span><span class="desglose-val">$ ${fmtMoneyARS(totalNetV)}</span></div>
+            <div class="desglose-row"><span class="desglose-label">Resultado</span><span class="desglose-val ${clsT}" style="font-size:14px">$ ${fmtMoneyARS(totalRes)}</span></div>
+          </div>`;
+      }
+      document.getElementById("desglose-instrumento").innerHTML = desgloseHTML;
+
       const wrap = document.getElementById("grafico-sesion-wrap");
       if (wrap.style.display !== "none")
         renderGraficoSesion(document.getElementById("chartSesion"), ops);
