@@ -185,6 +185,10 @@
     .trat-aS { background: rgba(239,68,68,0.18);  color: #ef4444; }
     .trat-cL { background: rgba(56,189,248,0.18);  color: #38bdf8; }
     .trat-cS { background: rgba(251,191,36,0.18);  color: #fbbf24; }
+    .trat-roll { background: rgba(13,148,136,0.18); color: var(--primary); }
+    .pos-bloque.pos-roll { border-color: rgba(13,148,136,0.5); background: rgba(13,148,136,0.04); }
+    .roll-section-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin: 8px 0 3px; border-top: 1px solid var(--border); padding-top: 6px; }
+    .roll-warn { font-size: 10px; color: var(--muted); margin-top: 2px; font-style: italic; }
 
     /* SVG */
     .svg-wrapper { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-top: 10px; }
@@ -272,18 +276,28 @@
           </div>
         </div>
         <label>Tratamiento</label>
-        <select id="opTratamiento">
+        <select id="opTratamiento" onchange="toggleRollFields()">
           <option value="auto">Automático</option>
           <option value="abrir_long">Abrir Long</option>
           <option value="cerrar_long">Cerrar Long</option>
           <option value="abrir_short">Abrir Short</option>
           <option value="cerrar_short">Cerrar Short</option>
+          <option value="rollear_short">↻ Rollear Short</option>
         </select>
         <label>Nominales</label>
         <input type="number" id="opVN" value="0" placeholder="Ej: 20000">
-        <label>Precio</label>
-        <input type="number" id="opPrecio" placeholder="Ej: 88000"
-          onkeydown="if(event.key==='Enter') agregarOperacion()">
+        <div id="precioNormalFields">
+          <label>Precio</label>
+          <input type="number" id="opPrecio" placeholder="Ej: 88000"
+            onkeydown="if(event.key==='Enter') agregarOperacion()">
+        </div>
+        <div id="rollFields" style="display:none">
+          <label>Precio Compra CI <span style="font-size:11px;color:var(--muted)">(cierra el short)</span></label>
+          <input type="number" id="rollPrecioCI" placeholder="Ej: 85500">
+          <label>Precio Venta 24hs <span style="font-size:11px;color:var(--muted)">(abre nuevo short)</span></label>
+          <input type="number" id="rollPrecio24" placeholder="Ej: 85650"
+            onkeydown="if(event.key==='Enter') agregarOperacion()">
+        </div>
         <div class="atajos-hint">Atajos: C = Compra &nbsp;·&nbsp; V = Venta &nbsp;·&nbsp; Enter = Guardar &nbsp;·&nbsp; Esc = Cancelar</div>
         <button id="btnGuardarOp" onclick="agregarOperacion()">Agregar operación</button>
         <button id="btnCancelarEdicion" class="btn-secondary" style="display:none" onclick="cancelarEdicion()">Cancelar edición</button>
@@ -642,6 +656,14 @@
       document.getElementById("opTratamiento").value  = "auto";
       document.getElementById("opPrecio").value       = "";
       document.getElementById("opVN").value           = ultimoVN > 0 ? String(ultimoVN) : "0";
+      document.getElementById("rollPrecioCI").value   = "";
+      document.getElementById("rollPrecio24").value   = "";
+      toggleRollFields();
+    }
+    function toggleRollFields() {
+      const isRoll = document.getElementById("opTratamiento").value === "rollear_short";
+      document.getElementById("precioNormalFields").style.display = isRoll ? "none" : "block";
+      document.getElementById("rollFields").style.display          = isRoll ? "block" : "none";
     }
     function setModoEdicion(activo) {
       document.getElementById("btnGuardarOp").textContent         = activo ? "Guardar cambios" : "Agregar operación";
@@ -657,6 +679,39 @@
         mostrarToast("Ingresá un precio y nominales válidos.", "error"); return;
       }
       ultimoVN = VN;
+
+      // ── Rollear Short ────────────────────────────────────────────────────
+      if (tratamiento === "rollear_short") {
+        const precioCI  = parseFloat(document.getElementById("rollPrecioCI").value);
+        const precio24  = parseFloat(document.getElementById("rollPrecio24").value);
+        if (!isFinite(precioCI) || !isFinite(precio24) || precioCI <= 0 || precio24 <= 0) {
+          mostrarToast("Ingresá ambos precios del roll (CI y 24hs).", "error"); return;
+        }
+        const opsActuales = getOperaciones();
+        const pos = calcularPosiciones(opsActuales);
+        const availShort = pos.shortVNTotal;
+        if (availShort <= 0) {
+          mostrarToast("No hay posición SHORT abierta para rolear.", "error", 3500); return;
+        }
+        if (VN > availShort) {
+          mostrarToast(`Solo hay ${availShort.toLocaleString("es-AR")} VN SHORT disponibles. Ajustá los nominales.`, "error", 4000); return;
+        }
+        const dr = 0.0001;
+        const brutoCI = VN * (precioCI / 100);
+        const bruto24 = VN * (precio24 / 100);
+        const netoCI  = brutoCI  + brutoCI  * dr;  // compra: suma derecho
+        const neto24  = bruto24  - bruto24  * dr;  // venta: resta derecho
+        const rollId  = `roll_${Date.now()}`;
+        const ts = Date.now();
+        opsActuales.push({ id: ts,   fecha: new Date().toISOString(), tipo: "compra", instrumento: "bono", tratamiento: "cerrar_short", precio: precioCI,  VN, neto: netoCI,  rollId, plazo: "CI"   });
+        opsActuales.push({ id: ts+1, fecha: new Date().toISOString(), tipo: "venta",  instrumento: "bono", tratamiento: "abrir_short",  precio: precio24, VN, neto: neto24, rollId, plazo: "24hs" });
+        saveOperaciones(opsActuales);
+        cancelarEdicion();
+        renderOperaciones();
+        mostrarToast(`Roll registrado: cierra ${VN.toLocaleString("es-AR")} VN SHORT → nueva apertura 24hs`, "ok", 2800);
+        return;
+      }
+
       const esAccion = instrumento === "accion";
       const derecho  = esAccion ? 0.000605 : 0.0001;
       const bruto    = esAccion ? VN * precio : VN * (precio / 100);
@@ -827,7 +882,7 @@
         totalNeto += op.neto;
         return `<tr>
           <td>${fmtFechaHora(op.fecha)}</td>
-          <td>${op.tipo === "compra" ? "🟢 Compra" : "🔵 Venta"}${op.instrumento === "accion" ? "<span class='pill'>Acc</span>" : ""}${(()=>{const t=op.tratamiento||"auto";return t==="abrir_long"?"<span class='trat-pill trat-aL'>Long+</span>":t==="cerrar_long"?"<span class='trat-pill trat-cL'>Long−</span>":t==="abrir_short"?"<span class='trat-pill trat-aS'>Short+</span>":t==="cerrar_short"?"<span class='trat-pill trat-cS'>Short−</span>":""})()}</td>
+          <td>${op.tipo === "compra" ? "🟢 Compra" : "🔵 Venta"}${op.instrumento === "accion" ? "<span class='pill'>Acc</span>" : ""}${(()=>{const t=op.tratamiento||"auto";const r=op.rollId?"<span class='trat-pill trat-roll'>Roll</span>":"";return (t==="abrir_long"?"<span class='trat-pill trat-aL'>Long+</span>":t==="cerrar_long"?"<span class='trat-pill trat-cL'>Long−</span>":t==="abrir_short"?"<span class='trat-pill trat-aS'>Short+</span>":t==="cerrar_short"?"<span class='trat-pill trat-cS'>Short−</span>":"")+r})()}</td>
           <td>$ ${fmtMoneyARS(op.precio)}</td>
           <td>${op.VN.toLocaleString("es-AR")}</td>
           <td>$ ${fmtMoneyARS(op.neto)}</td>
@@ -876,7 +931,7 @@
           openLongs.push({ id: op.id, restante: op.VN, precio: op.precio, netoUnit: nu, fecha: op.fecha });
 
         } else if (t === "abrir_short") {
-          openShorts.push({ id: op.id, restante: op.VN, precio: op.precio, netoUnit: nu, fecha: op.fecha });
+          openShorts.push({ id: op.id, restante: op.VN, precio: op.precio, netoUnit: nu, fecha: op.fecha, rollId: op.rollId, plazo: op.plazo });
 
         } else if (t === "cerrar_long") {
           const avail = openLongs.reduce((s, l) => s + l.restante, 0);
@@ -895,6 +950,14 @@
           const avail = openShorts.reduce((s, s2) => s + s2.restante, 0);
           let toCl = Math.min(op.VN, avail);
           if (op.VN > avail) warnings.push(`Cerrar Short: solo ${avail.toLocaleString("es-AR")} VN disponibles (pedido: ${op.VN.toLocaleString("es-AR")}).`);
+          // Capturar precio promedio ponderado de lo que se va a cerrar
+          let precioAnt = 0, vnAntSum = 0, tmpCl = toCl;
+          for (const s2 of openShorts) {
+            if (vnAntSum >= tmpCl) break;
+            const q = Math.min(tmpCl - vnAntSum, s2.restante);
+            precioAnt += s2.precio * q; vnAntSum += q;
+          }
+          if (vnAntSum > 0) precioAnt /= vnAntSum;
           let pnl = 0;
           while (toCl > 0 && openShorts.length > 0) {
             const s2 = openShorts[0], qty = Math.min(toCl, s2.restante);
@@ -902,7 +965,7 @@
             s2.restante -= qty; toCl -= qty;
             if (s2.restante <= 0) openShorts.shift();
           }
-          if (toCl < op.VN) closedPairs.push({ type: "short", pnl, vnMatched: op.VN - toCl });
+          if (toCl < op.VN) closedPairs.push({ type: "short", pnl, vnMatched: op.VN - toCl, rollId: op.rollId, precioAperturaAnterior: precioAnt, precioCI: op.precio });
 
         } else {
           // AUTO
@@ -941,8 +1004,34 @@
       const breakEvenLong  = longVNTotal  > 0 ? (longNeto  / longVNTotal)  / 0.9999 * 100 : 0;
       const breakEvenShort = shortVNTotal > 0 ? (shortNeto / shortVNTotal) / 1.0001 * 100 : 0;
 
+      // Armar rollGroups para display agrupado
+      const rollIds = [...new Set([
+        ...closedPairs.filter(p => p.rollId).map(p => p.rollId),
+      ])];
+      const rollGroups = rollIds.map(rid => {
+        const cierre = closedPairs.find(p => p.rollId === rid);
+        const apertura = openShorts.find(s => s.rollId === rid);
+        const opApert = sorted.find(o => o.rollId === rid && o.tratamiento === "abrir_short");
+        const flujoNeto = opApert ? opApert.neto - (cierre ? cierre.vnMatched * cierre.precioCI / 100 * 1.0001 : 0) : 0;
+        // flujoNeto = neto_venta24 - neto_compraCI
+        const opCI   = sorted.find(o => o.rollId === rid && o.tratamiento === "cerrar_short");
+        const netoCI  = opCI   ? opCI.neto   : 0;
+        const neto24  = opApert ? opApert.neto : 0;
+        return {
+          rollId: rid,
+          vnMatched: cierre ? cierre.vnMatched : 0,
+          pnlCierre: cierre ? cierre.pnl : 0,
+          precioAperturaAnterior: cierre ? cierre.precioAperturaAnterior : 0,
+          precioCI:   opCI   ? opCI.precio   : 0,
+          precio24:   opApert ? opApert.precio : 0,
+          netoCI, neto24,
+          flujoNeto: neto24 - netoCI,
+          plazo24: opApert ? (opApert.plazo || "24hs") : "24hs",
+        };
+      });
+
       return {
-        openLongs, openShorts, closedPairs, warnings,
+        openLongs, openShorts, closedPairs, warnings, rollGroups,
         realizadoPnL: closedPairs.reduce((s, p) => s + p.pnl, 0),
         longVNTotal, shortVNTotal, longNeto, shortNeto,
         longProm, shortProm, breakEvenLong, breakEvenShort,
@@ -1033,8 +1122,30 @@
         `<div class="metrica-item"><div class="metrica-label">${l}</div><div class="metrica-valor ${c}">${v}</div></div>`
       ).join("");
 
-      // Bloques de posiciones abiertas
+      // Bloques de rolls
       let posHTML = "";
+      for (const roll of pos.rollGroups) {
+        const clsP = roll.pnlCierre >= 0 ? "ok" : "bad";
+        const clsF = roll.flujoNeto >= 0 ? "ok" : "bad";
+        const spread = (roll.precio24 - roll.precioCI).toFixed(2);
+        posHTML += `<div class="pos-bloque pos-roll">
+          <div class="pos-titulo" style="color:var(--primary)">↻ ROLL SHORT &nbsp;·&nbsp; ${roll.vnMatched.toLocaleString("es-AR")} VN</div>
+
+          <div class="roll-section-label">Cierre del short anterior</div>
+          <div class="pos-row"><span class="pos-label">Precio apertura anterior</span><span class="pos-val">$ ${fmtMoneyARS(roll.precioAperturaAnterior)}</span></div>
+          <div class="pos-row"><span class="pos-label">Compra CI (cierre)</span><span class="pos-val">$ ${fmtMoneyARS(roll.precioCI)}</span></div>
+          <div class="pos-row"><span class="pos-label">Resultado realizado</span><span class="pos-val ${clsP}">$ ${fmtMoneyARS(roll.pnlCierre)}</span></div>
+
+          <div class="roll-section-label">Rolleo CI → ${roll.plazo24}</div>
+          <div class="pos-row"><span class="pos-label">Compra CI</span><span class="pos-val">$ ${fmtMoneyARS(roll.precioCI)}</span></div>
+          <div class="pos-row"><span class="pos-label">Venta ${roll.plazo24}</span><span class="pos-val">$ ${fmtMoneyARS(roll.precio24)}</span></div>
+          <div class="pos-row"><span class="pos-label">Spread bruto</span><span class="pos-val">${spread} pts</span></div>
+          <div class="pos-row"><span class="pos-label">Flujo neto del rolleo</span><span class="pos-val ${clsF}">$ ${fmtMoneyARS(roll.flujoNeto)}</span></div>
+          <div class="roll-warn">⚠ Flujo neto no es P&L realizado</div>
+        </div>`;
+      }
+
+      // Bloques de posiciones abiertas
       if (pos.openLongs.length > 0) {
         posHTML += `<div class="pos-bloque pos-long">
           <div class="pos-titulo ok">▲ LONG ABIERTO &nbsp;·&nbsp; ${pos.longVNTotal.toLocaleString("es-AR")} VN</div>
