@@ -172,6 +172,19 @@
     .desglose-row { display: flex; justify-content: space-between; font-size: 12px; padding: 2px 0; }
     .desglose-label { color: var(--muted); }
     .desglose-val { font-weight: bold; }
+    .pos-bloque { margin-top: 8px; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); }
+    .pos-bloque.pos-long  { border-color: rgba(16,185,129,0.4); background: rgba(16,185,129,0.04); }
+    .pos-bloque.pos-short { border-color: rgba(239,68,68,0.4);  background: rgba(239,68,68,0.04); }
+    .pos-bloque.pos-total { border-color: var(--primary); }
+    .pos-titulo { font-size: 12px; font-weight: bold; margin-bottom: 6px; letter-spacing: 0.3px; }
+    .pos-row { display: flex; justify-content: space-between; font-size: 12px; padding: 2px 0; }
+    .pos-label { color: var(--muted); }
+    .pos-val { font-weight: bold; }
+    .trat-pill { display:inline-block; padding: 1px 6px; border-radius: 999px; font-size: 10px; margin-left: 4px; vertical-align: middle; }
+    .trat-aL { background: rgba(16,185,129,0.18); color: #10b981; }
+    .trat-aS { background: rgba(239,68,68,0.18);  color: #ef4444; }
+    .trat-cL { background: rgba(56,189,248,0.18);  color: #38bdf8; }
+    .trat-cS { background: rgba(251,191,36,0.18);  color: #fbbf24; }
 
     /* SVG */
     .svg-wrapper { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-top: 10px; }
@@ -258,6 +271,14 @@
             </select>
           </div>
         </div>
+        <label>Tratamiento</label>
+        <select id="opTratamiento">
+          <option value="auto">Automático</option>
+          <option value="abrir_long">Abrir Long</option>
+          <option value="cerrar_long">Cerrar Long</option>
+          <option value="abrir_short">Abrir Short</option>
+          <option value="cerrar_short">Cerrar Short</option>
+        </select>
         <label>Nominales</label>
         <input type="number" id="opVN" value="0" placeholder="Ej: 20000">
         <label>Precio</label>
@@ -616,10 +637,11 @@
 
     // ── Formulario ────────────────────────────────────────────────────────
     function limpiarFormularioOperacion() {
-      document.getElementById("tipoOp").value       = "compra";
-      document.getElementById("opInstrumento").value = "bono";
-      document.getElementById("opPrecio").value      = "";
-      document.getElementById("opVN").value          = ultimoVN > 0 ? String(ultimoVN) : "0";
+      document.getElementById("tipoOp").value        = "compra";
+      document.getElementById("opInstrumento").value  = "bono";
+      document.getElementById("opTratamiento").value  = "auto";
+      document.getElementById("opPrecio").value       = "";
+      document.getElementById("opVN").value           = ultimoVN > 0 ? String(ultimoVN) : "0";
     }
     function setModoEdicion(activo) {
       document.getElementById("btnGuardarOp").textContent         = activo ? "Guardar cambios" : "Agregar operación";
@@ -628,25 +650,40 @@
     function agregarOperacion() {
       const tipo        = document.getElementById("tipoOp").value;
       const instrumento = document.getElementById("opInstrumento").value;
+      const tratamiento = document.getElementById("opTratamiento").value;
       const VN          = parseFloat(document.getElementById("opVN").value || "0");
       const precio      = parseFloat(document.getElementById("opPrecio").value);
       if (!isFinite(precio) || !isFinite(VN) || precio <= 0 || VN <= 0) {
         mostrarToast("Ingresá un precio y nominales válidos.", "error"); return;
       }
       ultimoVN = VN;
-      // Bono: precio cotiza por $100 VN, derecho 0,01%
-      // Acción: precio por unidad, derecho 0,05% + IVA 21%
       const esAccion = instrumento === "accion";
       const derecho  = esAccion ? 0.000605 : 0.0001;
       const bruto    = esAccion ? VN * precio : VN * (precio / 100);
       const neto     = tipo === "compra" ? bruto + bruto * derecho : bruto - bruto * derecho;
       const ops = getOperaciones();
+
+      // Validación de cierres forzados
+      if (tratamiento === "cerrar_long" || tratamiento === "cerrar_short") {
+        const pos = calcularPosiciones(ops.filter(o => o.id !== editandoOperacionId));
+        const tipo_pos = tratamiento === "cerrar_long" ? "long" : "short";
+        const avail = tipo_pos === "long"
+          ? pos.openLongs.reduce((s, l) => s + l.restante, 0)
+          : pos.openShorts.reduce((s, s2) => s + s2.restante, 0);
+        if (avail <= 0) {
+          mostrarToast(`No hay posición ${tipo_pos === "long" ? "LONG" : "SHORT"} abierta para cerrar.`, "error", 3500); return;
+        }
+        if (VN > avail) {
+          mostrarToast(`Solo hay ${avail.toLocaleString("es-AR")} VN ${tipo_pos === "long" ? "LONG" : "SHORT"} disponibles. Ajustá los nominales.`, "error", 4000); return;
+        }
+      }
+
       if (editandoOperacionId !== null) {
         const idx = ops.findIndex((op) => op.id === editandoOperacionId);
-        if (idx !== -1) ops[idx] = { ...ops[idx], tipo, instrumento, precio, VN, neto };
+        if (idx !== -1) ops[idx] = { ...ops[idx], tipo, instrumento, tratamiento, precio, VN, neto };
         mostrarToast("Operación actualizada", "ok");
       } else {
-        ops.push({ id: Date.now(), fecha: new Date().toISOString(), tipo, instrumento, precio, VN, neto });
+        ops.push({ id: Date.now(), fecha: new Date().toISOString(), tipo, instrumento, tratamiento, precio, VN, neto });
         mostrarToast("Operación guardada", "ok");
       }
       saveOperaciones(ops);
@@ -663,10 +700,11 @@
       const op = getOperaciones().find((o) => o.id === id);
       if (!op) return;
       editandoOperacionId = id;
-      document.getElementById("tipoOp").value        = op.tipo;
-      document.getElementById("opInstrumento").value  = op.instrumento || "bono";
-      document.getElementById("opVN").value           = String(op.VN);
-      document.getElementById("opPrecio").value       = String(op.precio);
+      document.getElementById("tipoOp").value         = op.tipo;
+      document.getElementById("opInstrumento").value   = op.instrumento  || "bono";
+      document.getElementById("opTratamiento").value   = op.tratamiento  || "auto";
+      document.getElementById("opVN").value            = String(op.VN);
+      document.getElementById("opPrecio").value        = String(op.precio);
       setModoEdicion(true);
       document.getElementById("opPrecio").focus();
     }
@@ -789,7 +827,7 @@
         totalNeto += op.neto;
         return `<tr>
           <td>${fmtFechaHora(op.fecha)}</td>
-          <td>${op.tipo === "compra" ? "🟢 Compra" : "🔵 Venta"}${op.instrumento === "accion" ? " <span class='pill'>Acc</span>" : ""}</td>
+          <td>${op.tipo === "compra" ? "🟢 Compra" : "🔵 Venta"}${op.instrumento === "accion" ? "<span class='pill'>Acc</span>" : ""}${(()=>{const t=op.tratamiento||"auto";return t==="abrir_long"?"<span class='trat-pill trat-aL'>Long+</span>":t==="cerrar_long"?"<span class='trat-pill trat-cL'>Long−</span>":t==="abrir_short"?"<span class='trat-pill trat-aS'>Short+</span>":t==="cerrar_short"?"<span class='trat-pill trat-cS'>Short−</span>":""})()}</td>
           <td>$ ${fmtMoneyARS(op.precio)}</td>
           <td>${op.VN.toLocaleString("es-AR")}</td>
           <td>$ ${fmtMoneyARS(op.neto)}</td>
@@ -809,19 +847,107 @@
         <td></td>
       </tr>`;
 
-      const gan = netoVentas - netoCompras;
-      const cls = gan >= 0 ? "ok" : "bad";
-      const promC = vnCompras > 0 ? sumaPxVN / vnCompras : 0;
+      const posRes = calcularPosiciones(ops);
+      const clsR2 = posRes.realizadoPnL >= 0 ? "ok" : "bad";
+      const posNetStr = posRes.posicionNeta > 0 ? `LONG +${posRes.longVNTotal.toLocaleString("es-AR")}`
+                      : posRes.posicionNeta < 0 ? `SHORT −${posRes.shortVNTotal.toLocaleString("es-AR")}`
+                      : "NEUTRAL (0)";
       resumen.innerHTML =
         `<b>Total compras (neto):</b> $ ${fmtMoneyARS(netoCompras)}<br>` +
         `<b>Total ventas (neto):</b> $ ${fmtMoneyARS(netoVentas)}<br>` +
-        `<b class="${cls}">Resultado acumulado:</b> <b class="${cls}">$ ${fmtMoneyARS(gan)}</b><br>` +
+        `<b class="${clsR2}">Resultado realizado:</b> <b class="${clsR2}">$ ${fmtMoneyARS(posRes.realizadoPnL)}</b><br>` +
         `<b>Nominales comprados:</b> ${vnCompras.toLocaleString("es-AR")}<br>` +
         `<b>Nominales vendidos:</b> ${vnVentas.toLocaleString("es-AR")}<br>` +
-        `<b>Posición neta (compras - ventas):</b> ${(vnCompras - vnVentas).toLocaleString("es-AR")}<br>` +
-        `<b>Precio promedio de compra:</b> $ ${fmtMoneyARS(promC)}`;
+        `<b>Posición neta:</b> ${posNetStr}`;
 
       renderEstadoSesion(ops);
+    }
+
+    // ── Motor de posiciones ───────────────────────────────────────────────
+    function calcularPosiciones(ops) {
+      const sorted = [...ops].sort((a, b) => (a.fecha < b.fecha ? -1 : 1));
+      const openLongs = [], openShorts = [], closedPairs = [], warnings = [];
+
+      for (const op of sorted) {
+        const t  = op.tratamiento || "auto";
+        const nu = op.neto / op.VN;
+
+        if (t === "abrir_long") {
+          openLongs.push({ id: op.id, restante: op.VN, precio: op.precio, netoUnit: nu, fecha: op.fecha });
+
+        } else if (t === "abrir_short") {
+          openShorts.push({ id: op.id, restante: op.VN, precio: op.precio, netoUnit: nu, fecha: op.fecha });
+
+        } else if (t === "cerrar_long") {
+          const avail = openLongs.reduce((s, l) => s + l.restante, 0);
+          let toCl = Math.min(op.VN, avail);
+          if (op.VN > avail) warnings.push(`Cerrar Long: solo ${avail.toLocaleString("es-AR")} VN disponibles (pedido: ${op.VN.toLocaleString("es-AR")}).`);
+          let pnl = 0;
+          while (toCl > 0 && openLongs.length > 0) {
+            const l = openLongs[0], qty = Math.min(toCl, l.restante);
+            pnl += (nu - l.netoUnit) * qty;
+            l.restante -= qty; toCl -= qty;
+            if (l.restante <= 0) openLongs.shift();
+          }
+          if (toCl < op.VN) closedPairs.push({ type: "long", pnl, vnMatched: op.VN - toCl });
+
+        } else if (t === "cerrar_short") {
+          const avail = openShorts.reduce((s, s2) => s + s2.restante, 0);
+          let toCl = Math.min(op.VN, avail);
+          if (op.VN > avail) warnings.push(`Cerrar Short: solo ${avail.toLocaleString("es-AR")} VN disponibles (pedido: ${op.VN.toLocaleString("es-AR")}).`);
+          let pnl = 0;
+          while (toCl > 0 && openShorts.length > 0) {
+            const s2 = openShorts[0], qty = Math.min(toCl, s2.restante);
+            pnl += (s2.netoUnit - nu) * qty;
+            s2.restante -= qty; toCl -= qty;
+            if (s2.restante <= 0) openShorts.shift();
+          }
+          if (toCl < op.VN) closedPairs.push({ type: "short", pnl, vnMatched: op.VN - toCl });
+
+        } else {
+          // AUTO
+          if (op.tipo === "compra") {
+            let rem = op.VN, pnl = 0, closedVN = 0;
+            while (rem > 0 && openShorts.length > 0) {
+              const s2 = openShorts[0], qty = Math.min(rem, s2.restante);
+              pnl += (s2.netoUnit - nu) * qty;
+              s2.restante -= qty; rem -= qty; closedVN += qty;
+              if (s2.restante <= 0) openShorts.shift();
+            }
+            if (closedVN > 0) closedPairs.push({ type: "short", pnl, vnMatched: closedVN });
+            if (rem > 0) openLongs.push({ id: op.id, restante: rem, precio: op.precio, netoUnit: nu, fecha: op.fecha });
+          } else {
+            let rem = op.VN, pnl = 0, closedVN = 0;
+            while (rem > 0 && openLongs.length > 0) {
+              const l = openLongs[0], qty = Math.min(rem, l.restante);
+              pnl += (nu - l.netoUnit) * qty;
+              l.restante -= qty; rem -= qty; closedVN += qty;
+              if (l.restante <= 0) openLongs.shift();
+            }
+            if (closedVN > 0) closedPairs.push({ type: "long", pnl, vnMatched: closedVN });
+            if (rem > 0) openShorts.push({ id: op.id, restante: rem, precio: op.precio, netoUnit: nu, fecha: op.fecha });
+          }
+        }
+      }
+
+      const longVNTotal  = openLongs.reduce((s, l)  => s + l.restante, 0);
+      const shortVNTotal = openShorts.reduce((s, s2) => s + s2.restante, 0);
+      const longNeto     = openLongs.reduce((s, l)  => s + l.netoUnit * l.restante, 0);
+      const shortNeto    = openShorts.reduce((s, s2) => s + s2.netoUnit * s2.restante, 0);
+      const longProm     = longVNTotal  > 0 ? openLongs.reduce((s, l)  => s + l.precio * l.restante, 0)  / longVNTotal  : 0;
+      const shortProm    = shortVNTotal > 0 ? openShorts.reduce((s, s2) => s + s2.precio * s2.restante, 0) / shortVNTotal : 0;
+
+      // Break-even: buy_neto = sell_neto → inverso del derecho de la punta contraria (bonos 0,0001)
+      const breakEvenLong  = longVNTotal  > 0 ? (longNeto  / longVNTotal)  / 0.9999 * 100 : 0;
+      const breakEvenShort = shortVNTotal > 0 ? (shortNeto / shortVNTotal) / 1.0001 * 100 : 0;
+
+      return {
+        openLongs, openShorts, closedPairs, warnings,
+        realizadoPnL: closedPairs.reduce((s, p) => s + p.pnl, 0),
+        longVNTotal, shortVNTotal, longNeto, shortNeto,
+        longProm, shortProm, breakEvenLong, breakEvenShort,
+        posicionNeta: longVNTotal - shortVNTotal,
+      };
     }
 
     // ── Estado de la sesión ───────────────────────────────────────────────
@@ -881,64 +1007,57 @@
         document.getElementById("desglose-instrumento").innerHTML = "";
         return;
       }
-      const s = calcularSesgo(ops);
-      badge.className = `sesgo-badge ${s.colorClass}`;
-      labelEl.textContent = s.label;
-      labelEl.style.color = s.label === "LONG" ? "var(--green)" : s.label === "SHORT" ? "var(--red)" : "var(--muted)";
-      subEl.textContent = s.sub;
-      const m = calcularMetricasSesion(ops);
-      const clsR = m.resultado >= 0 ? "ok" : "bad";
+      const pos = calcularPosiciones(ops);
+      const sesgoLabel = pos.posicionNeta > 0 ? "LONG" : pos.posicionNeta < 0 ? "SHORT" : "NEUTRAL";
+      badge.className = `sesgo-badge ${sesgoLabel === "LONG" ? "sesgo-long" : sesgoLabel === "SHORT" ? "sesgo-short" : "sesgo-neutral"}`;
+      labelEl.textContent = sesgoLabel;
+      labelEl.style.color = sesgoLabel === "LONG" ? "var(--green)" : sesgoLabel === "SHORT" ? "var(--red)" : "var(--muted)";
+      const vnNetaAbs = Math.abs(pos.posicionNeta);
+      subEl.textContent = vnNetaAbs > 0 ? `${sesgoLabel} ${vnNetaAbs.toLocaleString("es-AR")} VN neto` : "Posición cerrada / neutral";
+      const m   = calcularMetricasSesion(ops);
+      const clsR = pos.realizadoPnL >= 0 ? "ok" : "bad";
+      const posNetaLabel = pos.posicionNeta > 0 ? `LONG ${pos.longVNTotal.toLocaleString("es-AR")}`
+                         : pos.posicionNeta < 0 ? `SHORT ${pos.shortVNTotal.toLocaleString("es-AR")}`
+                         : "NEUTRAL";
       const items = [
-        { l: "Operaciones",  v: `${m.total} (${m.nc}C / ${m.nv}V)`, c: "" },
-        { l: "Volumen VN",   v: (m.vnC + m.vnV).toLocaleString("es-AR"), c: "" },
-        { l: "Prom. compra", v: m.promC > 0 ? `$ ${fmtMoneyARS(m.promC)}` : "—", c: "" },
-        { l: "Prom. venta",  v: m.promV > 0 ? `$ ${fmtMoneyARS(m.promV)}` : "—", c: "" },
-        { l: "Spread prom.", v: m.spread !== null ? m.spread.toFixed(2) : "—", c: m.spread !== null ? (m.spread >= 0 ? "ok" : "bad") : "" },
-        { l: "Mejor compra", v: m.mejorCompra !== null ? `$ ${fmtMoneyARS(m.mejorCompra)}` : "—", c: "ok" },
-        { l: "Mejor venta",  v: m.mejorVenta  !== null ? `$ ${fmtMoneyARS(m.mejorVenta)}`  : "—", c: "ok" },
-        { l: "Resultado",    v: `$ ${fmtMoneyARS(m.resultado)}`, c: clsR },
+        { l: "Operaciones",     v: `${m.total} (${m.nc}C / ${m.nv}V)`, c: "" },
+        { l: "Resultado real.", v: `$ ${fmtMoneyARS(pos.realizadoPnL)}`, c: clsR },
+        { l: "Posición neta",  v: posNetaLabel, c: pos.posicionNeta > 0 ? "ok" : pos.posicionNeta < 0 ? "bad" : "" },
+        { l: "Mejor compra",   v: m.mejorCompra !== null ? `$ ${fmtMoneyARS(m.mejorCompra)}` : "—", c: "ok" },
+        { l: "Mejor venta",    v: m.mejorVenta  !== null ? `$ ${fmtMoneyARS(m.mejorVenta)}`  : "—", c: "ok" },
+        { l: "Spread prom.",   v: m.spread !== null ? m.spread.toFixed(2) : "—", c: m.spread !== null ? (m.spread >= 0 ? "ok" : "bad") : "" },
+        { l: "Prom. compra",   v: m.promC > 0 ? `$ ${fmtMoneyARS(m.promC)}` : "—", c: "" },
+        { l: "Prom. venta",    v: m.promV > 0 ? `$ ${fmtMoneyARS(m.promV)}` : "—", c: "" },
       ];
       grid.innerHTML = items.map(({ l, v, c }) =>
         `<div class="metrica-item"><div class="metrica-label">${l}</div><div class="metrica-valor ${c}">${v}</div></div>`
       ).join("");
 
-      // Desglose por instrumento
-      const grupos = [
-        { key: "bono",   label: "Bonos" },
-        { key: "accion", label: "Acciones" }
-      ];
-      let desgloseHTML = "";
-      let totalNetC = 0, totalNetV = 0;
-      for (const { key, label } of grupos) {
-        const g = ops.filter(o => (o.instrumento || "bono") === key);
-        if (!g.length) continue;
-        const c = g.filter(o => o.tipo === "compra");
-        const v = g.filter(o => o.tipo === "venta");
-        const netC = c.reduce((s, o) => s + o.neto, 0);
-        const netV = v.reduce((s, o) => s + o.neto, 0);
-        const res  = netV - netC;
-        const cls  = res >= 0 ? "ok" : "bad";
-        totalNetC += netC; totalNetV += netV;
-        desgloseHTML += `
-          <div class="desglose-bloque">
-            <div class="desglose-titulo">${label} &nbsp;·&nbsp; ${c.length}C / ${v.length}V</div>
-            <div class="desglose-row"><span class="desglose-label">Compras (neto)</span><span class="desglose-val">$ ${fmtMoneyARS(netC)}</span></div>
-            <div class="desglose-row"><span class="desglose-label">Ventas (neto)</span><span class="desglose-val">$ ${fmtMoneyARS(netV)}</span></div>
-            <div class="desglose-row"><span class="desglose-label">Resultado</span><span class="desglose-val ${cls}">$ ${fmtMoneyARS(res)}</span></div>
-          </div>`;
+      // Bloques de posiciones abiertas
+      let posHTML = "";
+      if (pos.openLongs.length > 0) {
+        posHTML += `<div class="pos-bloque pos-long">
+          <div class="pos-titulo ok">▲ LONG ABIERTO &nbsp;·&nbsp; ${pos.longVNTotal.toLocaleString("es-AR")} VN</div>
+          <div class="pos-row"><span class="pos-label">Precio prom.</span><span class="pos-val">$ ${fmtMoneyARS(pos.longProm)}</span></div>
+          <div class="pos-row"><span class="pos-label">Costo neto</span><span class="pos-val">$ ${fmtMoneyARS(pos.longNeto)}</span></div>
+          <div class="pos-row"><span class="pos-label">Break-even venta</span><span class="pos-val ok">$ ${fmtMoneyARS(pos.breakEvenLong)}</span></div>
+        </div>`;
       }
-      if (desgloseHTML) {
-        const totalRes = totalNetV - totalNetC;
-        const clsT = totalRes >= 0 ? "ok" : "bad";
-        desgloseHTML += `
-          <div class="desglose-bloque" style="border-color:var(--primary);margin-top:6px">
-            <div class="desglose-titulo" style="color:var(--primary)">Total general</div>
-            <div class="desglose-row"><span class="desglose-label">Compras (neto)</span><span class="desglose-val">$ ${fmtMoneyARS(totalNetC)}</span></div>
-            <div class="desglose-row"><span class="desglose-label">Ventas (neto)</span><span class="desglose-val">$ ${fmtMoneyARS(totalNetV)}</span></div>
-            <div class="desglose-row"><span class="desglose-label">Resultado</span><span class="desglose-val ${clsT}" style="font-size:14px">$ ${fmtMoneyARS(totalRes)}</span></div>
-          </div>`;
+      if (pos.openShorts.length > 0) {
+        posHTML += `<div class="pos-bloque pos-short">
+          <div class="pos-titulo bad">▼ SHORT ABIERTO &nbsp;·&nbsp; ${pos.shortVNTotal.toLocaleString("es-AR")} VN</div>
+          <div class="pos-row"><span class="pos-label">Precio apertura</span><span class="pos-val">$ ${fmtMoneyARS(pos.shortProm)}</span></div>
+          <div class="pos-row"><span class="pos-label">Caja neta generada</span><span class="pos-val">$ ${fmtMoneyARS(pos.shortNeto)}</span></div>
+          <div class="pos-row"><span class="pos-label">Break-even recompra</span><span class="pos-val ok">$ ${fmtMoneyARS(pos.breakEvenShort)}</span></div>
+        </div>`;
       }
-      document.getElementById("desglose-instrumento").innerHTML = desgloseHTML;
+      if (!pos.openLongs.length && !pos.openShorts.length && ops.length) {
+        posHTML = `<div style="text-align:center;color:var(--muted);font-size:12px;margin-top:8px;padding:8px">Sin posiciones abiertas</div>`;
+      }
+      if (pos.warnings.length) {
+        posHTML += pos.warnings.map(w => `<div style="color:var(--red);font-size:11px;margin-top:4px">⚠ ${w}</div>`).join("");
+      }
+      document.getElementById("desglose-instrumento").innerHTML = posHTML;
 
       const wrap = document.getElementById("grafico-sesion-wrap");
       if (wrap.style.display !== "none")
