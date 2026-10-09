@@ -189,6 +189,8 @@
     .pos-bloque.pos-roll { border-color: rgba(13,148,136,0.5); background: rgba(13,148,136,0.04); }
     .roll-section-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin: 8px 0 3px; border-top: 1px solid var(--border); padding-top: 6px; }
     .roll-warn { font-size: 10px; color: var(--muted); margin-top: 2px; font-style: italic; }
+    .trat-hint-warn { font-size: 11px; color: #fbbf24; margin-top: 5px; padding: 5px 8px; background: rgba(251,191,36,0.07); border-radius: 6px; border: 1px solid rgba(251,191,36,0.2); }
+    .trat-hint-warn:empty { display: none; }
 
     /* SVG */
     .svg-wrapper { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-top: 10px; }
@@ -262,7 +264,7 @@
         <div class="row">
           <div>
             <label>Tipo</label>
-            <select id="tipoOp">
+            <select id="tipoOp" onchange="actualizarHintTratamiento()">
               <option value="compra">Compra</option>
               <option value="venta">Venta</option>
             </select>
@@ -276,7 +278,7 @@
           </div>
         </div>
         <label>Tratamiento</label>
-        <select id="opTratamiento" onchange="toggleRollFields()">
+        <select id="opTratamiento" onchange="toggleRollFields(); actualizarHintTratamiento()">
           <option value="auto">Automático</option>
           <option value="abrir_long">Abrir Long</option>
           <option value="cerrar_long">Cerrar Long</option>
@@ -284,6 +286,7 @@
           <option value="cerrar_short">Cerrar Short</option>
           <option value="rollear_short">↻ Rollear Short</option>
         </select>
+        <div id="trat-hint" class="trat-hint-warn"></div>
         <label>Nominales</label>
         <input type="number" id="opVN" value="0" placeholder="Ej: 20000">
         <div id="precioNormalFields">
@@ -665,11 +668,27 @@
       document.getElementById("rollPrecioCI").value   = "";
       document.getElementById("rollPrecio24").value   = "";
       toggleRollFields();
+      actualizarHintTratamiento();
     }
     function toggleRollFields() {
       const isRoll = document.getElementById("opTratamiento").value === "rollear_short";
       document.getElementById("precioNormalFields").style.display = isRoll ? "none" : "block";
       document.getElementById("rollFields").style.display          = isRoll ? "block" : "none";
+    }
+    function actualizarHintTratamiento() {
+      const hint = document.getElementById("trat-hint");
+      if (!hint) return;
+      const trat = document.getElementById("opTratamiento").value;
+      const tipo = document.getElementById("tipoOp").value;
+      if (trat !== "auto") { hint.textContent = ""; return; }
+      const pos = calcularPosiciones(getOperaciones());
+      if (tipo === "compra" && pos.shortVNTotal > 0) {
+        hint.innerHTML = `⚠ Hay SHORT abierto (${pos.shortVNTotal.toLocaleString("es-AR")} VN). Esta compra lo cerrará primero. Para un trade independiente usá <b>Abrir Long</b>.`;
+      } else if (tipo === "venta" && pos.longVNTotal > 0) {
+        hint.innerHTML = `⚠ Hay LONG abierto (${pos.longVNTotal.toLocaleString("es-AR")} VN). Esta venta lo cerrará primero. Para un trade independiente usá <b>Abrir Short</b>.`;
+      } else {
+        hint.textContent = "";
+      }
     }
     function setModoEdicion(activo) {
       document.getElementById("btnGuardarOp").textContent         = activo ? "Guardar cambios" : "Agregar operación";
@@ -973,6 +992,7 @@
         `<b>Posición neta:</b> ${posNetStr}`;
 
       renderEstadoSesion(ops);
+      actualizarHintTratamiento();
     }
 
     // ── Motor de posiciones ───────────────────────────────────────────────
