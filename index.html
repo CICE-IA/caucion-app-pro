@@ -305,6 +305,12 @@
           <button class="btn-secondary" onclick="exportarOperacionesTXT()">Exportar TXT</button>
           <button class="btn-secondary" onclick="confirmarBorrarTodo()">Borrar todo</button>
         </div>
+        <div class="row" style="margin-top:6px">
+          <button class="btn-secondary" onclick="exportarRespaldoJSON()">💾 Exportar respaldo</button>
+          <button class="btn-secondary" onclick="document.getElementById('importFile').click()">📂 Importar respaldo</button>
+        </div>
+        <input type="file" id="importFile" accept=".json" style="display:none" onchange="importarRespaldoJSON(event)">
+        <div class="muted" id="ultimo-respaldo" style="margin-top:4px"></div>
         <div class="result" id="resumenOps">Todavía no hay operaciones cargadas.</div>
 
         <div class="filtro-chips">
@@ -794,6 +800,57 @@
       });
     }
 
+    // ── Backup JSON ───────────────────────────────────────────────────────
+    const BACKUP_TS_KEY = "caucion_ultimo_respaldo";
+
+    function exportarRespaldoJSON() {
+      const ops = getOperaciones();
+      const data = { version: 1, fechaExportacion: new Date().toISOString(), operaciones: ops };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json;charset=utf-8" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `caucion_respaldo_${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      localStorage.setItem(BACKUP_TS_KEY, new Date().toISOString());
+      mostrarToast(`Respaldo exportado (${ops.length} operaciones)`, "ok", 2500);
+      renderUltimoRespaldo();
+    }
+
+    function importarRespaldoJSON(event) {
+      const file = event.target.files[0];
+      event.target.value = "";
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = JSON.parse(e.target.result);
+          if (!data || !Array.isArray(data.operaciones)) throw new Error("Formato inválido");
+          const n = data.operaciones.length;
+          mostrarModal({
+            titulo: "¿Importar respaldo?",
+            msg: `El archivo contiene <b>${n}</b> operación${n !== 1 ? "es" : ""} (exportado el ${fmtFechaHora(data.fechaExportacion)}).<br><br>Esto reemplazará todas las operaciones actuales.`,
+            labelConfirm: "Importar",
+            onConfirm: () => {
+              saveOperaciones(data.operaciones);
+              cancelarEdicion();
+              renderOperaciones();
+              mostrarToast(`Respaldo importado: ${n} operaciones`, "ok", 3000);
+            }
+          });
+        } catch {
+          mostrarToast("El archivo no es un respaldo válido.", "error", 4000);
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function renderUltimoRespaldo() {
+      const ts  = localStorage.getItem(BACKUP_TS_KEY);
+      const el  = document.getElementById("ultimo-respaldo");
+      if (el) el.textContent = ts ? `Último respaldo: ${fmtFechaHora(ts)}` : "Sin respaldo guardado aún";
+    }
+
     // ── Exportar TXT (SIN CAMBIOS) ────────────────────────────────────────
     function exportarOperacionesTXT() {
       const ops = getOperaciones();
@@ -1030,11 +1087,15 @@
         };
       });
 
+      const realizadoPnL = closedPairs.reduce((s, p) => s + p.pnl, 0);
+      // Break-even acumulado: precio al que cerrar el short deja resultado total = 0
+      const breakEvenShortAcum = shortVNTotal > 0 ? (shortNeto + realizadoPnL) / shortVNTotal / 1.0001 * 100 : 0;
+
       return {
         openLongs, openShorts, closedPairs, warnings, rollGroups,
-        realizadoPnL: closedPairs.reduce((s, p) => s + p.pnl, 0),
+        realizadoPnL,
         longVNTotal, shortVNTotal, longNeto, shortNeto,
-        longProm, shortProm, breakEvenLong, breakEvenShort,
+        longProm, shortProm, breakEvenLong, breakEvenShort, breakEvenShortAcum,
         posicionNeta: longVNTotal - shortVNTotal,
       };
     }
@@ -1155,11 +1216,55 @@
         </div>`;
       }
       if (pos.openShorts.length > 0) {
+        const dr = 0.0001;
+        const beActual = pos.breakEvenShort;
+        const beAcum   = pos.breakEvenShortAcum;
+        const diffPnL  = pos.realizadoPnL;
+        const showAcum = diffPnL !== 0 && pos.shortVNTotal > 0;
+
+        // Tabla de escenarios: 6 filas centradas en breakEvenShortAcum (paso 50 pts)
+        let tablaEscenarios = "";
+        if (showAcum) {
+          const step = 50;
+          const ini = Math.round((beAcum - 2 * step) / step) * step;
+          const scenarioPrices = Array.from({ length: 6 }, (_, i) => ini + i * step);
+          const rows = scenarioPrices.map(p => {
+            const pnlShort = pos.shortNeto - pos.shortVNTotal * (p / 100) * (1 + dr);
+            const pnlAcum  = diffPnL + pnlShort;
+            const clsS = pnlShort >= 0 ? "color:var(--green)" : "color:var(--red)";
+            const clsA = pnlAcum  >= 0 ? "color:var(--green)" : "color:var(--red)";
+            const diffA = Math.abs(p - beAcum);
+            const diffS = Math.abs(p - beActual);
+            const tagA = diffA < step * 0.6 ? ` <span style="font-size:9px;color:var(--primary)">(BE acum.)</span>`  : "";
+            const tagS = diffS < step * 0.6 && Math.abs(beActual - beAcum) > step * 0.5
+                         ? ` <span style="font-size:9px;color:var(--muted)">(BE actual)</span>` : "";
+            return `<tr>
+              <td style="padding:2px 4px;text-align:right">$ ${fmtMoneyARS(Math.round(p))}${tagA}${tagS}</td>
+              <td style="padding:2px 4px;text-align:right;${clsS}">$ ${fmtMoneyARS(pnlShort)}</td>
+              <td style="padding:2px 4px;text-align:right;${clsA}">$ ${fmtMoneyARS(pnlAcum)}</td>
+            </tr>`;
+          }).join("");
+          tablaEscenarios = `
+          <div style="border-top:1px solid rgba(239,68,68,0.2);margin:7px 0 4px;padding-top:6px">
+            <div class="pos-row"><span class="pos-label">P&L realizado acumulado</span><span class="pos-val ${diffPnL >= 0 ? "ok" : "bad"}">$ ${fmtMoneyARS(diffPnL)}</span></div>
+            <div class="pos-row"><span class="pos-label">Objetivo equilibrio total</span><span class="pos-val ${beAcum <= beActual ? "bad" : "ok"}">$ ${fmtMoneyARS(beAcum)}</span></div>
+          </div>
+          <table style="width:100%;border-collapse:collapse;font-size:11px;margin-top:4px">
+            <thead><tr style="border-bottom:1px solid var(--border)">
+              <th style="text-align:right;padding:2px 4px;color:var(--muted);font-weight:normal">Recompra</th>
+              <th style="text-align:right;padding:2px 4px;color:var(--muted);font-weight:normal">Short actual</th>
+              <th style="text-align:right;padding:2px 4px;color:var(--muted);font-weight:normal">Total acum.</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+          </table>`;
+        }
+
         posHTML += `<div class="pos-bloque pos-short">
           <div class="pos-titulo bad">▼ SHORT ABIERTO &nbsp;·&nbsp; ${pos.shortVNTotal.toLocaleString("es-AR")} VN</div>
           <div class="pos-row"><span class="pos-label">Precio apertura</span><span class="pos-val">$ ${fmtMoneyARS(pos.shortProm)}</span></div>
           <div class="pos-row"><span class="pos-label">Caja neta generada</span><span class="pos-val">$ ${fmtMoneyARS(pos.shortNeto)}</span></div>
-          <div class="pos-row"><span class="pos-label">Break-even recompra</span><span class="pos-val ok">$ ${fmtMoneyARS(pos.breakEvenShort)}</span></div>
+          <div class="pos-row"><span class="pos-label">Break-even recompra</span><span class="pos-val ok">$ ${fmtMoneyARS(beActual)}</span></div>
+          ${tablaEscenarios}
         </div>`;
       }
       if (!pos.openLongs.length && !pos.openShorts.length && ops.length) {
@@ -1361,6 +1466,7 @@
     initResizableColumns();
     renderOperaciones();
     initAtajosTeclado();
+    renderUltimoRespaldo();
     document.getElementById("opPrecio").focus();
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js");
   </script>
