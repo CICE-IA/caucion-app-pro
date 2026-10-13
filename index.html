@@ -700,8 +700,14 @@
       const tratamiento = document.getElementById("opTratamiento").value;
       const VN          = parseFloat(document.getElementById("opVN").value || "0");
       const precio      = parseFloat(document.getElementById("opPrecio").value);
-      if (!isFinite(precio) || !isFinite(VN) || precio <= 0 || VN <= 0) {
-        mostrarToast("Ingresá un precio y nominales válidos.", "error"); return;
+      if (tratamiento !== "rollear_short") {
+        if (!isFinite(precio) || !isFinite(VN) || precio <= 0 || VN <= 0) {
+          mostrarToast("Ingresá un precio y nominales válidos.", "error"); return;
+        }
+      } else {
+        if (!isFinite(VN) || VN <= 0) {
+          mostrarToast("Ingresá nominales válidos.", "error"); return;
+        }
       }
       ultimoVN = VN;
 
