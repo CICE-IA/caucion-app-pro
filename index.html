@@ -876,34 +876,108 @@
       if (el) el.textContent = ts ? `Último respaldo: ${fmtFechaHora(ts)}` : "Sin respaldo guardado aún";
     }
 
-    // ── Exportar TXT (SIN CAMBIOS) ────────────────────────────────────────
+    // ── Exportar TXT ─────────────────────────────────────────────────────
     function exportarOperacionesTXT() {
       const ops = getOperaciones();
-      const comprasPendientes = [], filas = [];
+      if (!ops.length) { mostrarToast("No hay operaciones para exportar.", "error", 3000); return; }
+
+      const pos = calcularPosiciones(ops);
+
+      // Totales brutos de todas las operaciones
+      let totalBuyNeto = 0, totalSellNeto = 0, totalBuyVN = 0, totalSellVN = 0;
       for (const op of ops) {
-        if (op.tipo === "compra") { comprasPendientes.push({ precio: op.precio, restante: op.VN }); continue; }
-        if (op.tipo !== "venta") continue;
-        let restanteVenta = op.VN;
-        while (restanteVenta > 0 && comprasPendientes.length > 0) {
-          const compra = comprasPendientes[0];
-          const cantidad = Math.min(restanteVenta, compra.restante);
-          filas.push([fmtMoneyARS(compra.precio), fmtMoneyARS(op.precio), cantidad.toLocaleString("es-AR"), fmtFechaSoloDia(op.fecha)]);
-          compra.restante -= cantidad;
-          restanteVenta   -= cantidad;
-          if (compra.restante <= 0) comprasPendientes.shift();
-        }
-        if (restanteVenta > 0)
-          filas.push(["", fmtMoneyARS(op.precio), restanteVenta.toLocaleString("es-AR"), fmtFechaSoloDia(op.fecha)]);
+        if (op.tipo === "compra") { totalBuyNeto += op.neto; totalBuyVN += op.VN; }
+        else if (op.tipo === "venta") { totalSellNeto += op.neto; totalSellVN += op.VN; }
       }
-      if (!filas.length) { mostrarToast("No hay operaciones suficientes para exportar.", "error", 3000); return; }
-      const encabezado = ["Precio de Compra", "Precio de Venta", "Cantidad", "Fecha de la Venta"];
-      const contenido  = [encabezado, ...filas].map((f) => f.join("\t")).join("\n");
-      const blob = new Blob([contenido], { type: "text/plain;charset=utf-8" });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = `registro_operaciones_${new Date().toISOString().slice(0, 10)}.txt`;
-      a.click();
-      URL.revokeObjectURL(a.href);
+
+      // Solo pares cerrados: excluir posiciones aún abiertas
+      const closedBuyNeto  = totalBuyNeto  - pos.longNeto;
+      const closedSellNeto = totalSellNeto - pos.shortNeto;
+      const closedVN       = totalBuyVN    - pos.longVNTotal;
+
+      if (closedVN <= 0) { mostrarToast("No hay pares cerrados para exportar.", "error", 3000); return; }
+
+      const precioPc    = closedBuyNeto  / closedVN * 100;
+      const precioPv    = closedSellNeto / closedVN * 100;
+      const pcRound     = Math.round(precioPc / 100) * 100;
+      const pvRound     = Math.round(precioPv / 100) * 100;
+      const netoTotal   = closedBuyNeto + closedSellNeto;
+      const resultado   = pos.realizadoPnL;
+
+      const d = new Date();
+      const fechaCorta = `${String(d.getDate()).padStart(2,"0")}-${String(d.getMonth()+1).padStart(2,"0")}`;
+      const fechaLarga = d.toLocaleDateString("es-AR", { day:"2-digit", month:"2-digit", year:"numeric" });
+
+      const abiertaWarn = (pos.longVNTotal > 0 || pos.shortVNTotal > 0)
+        ? `<div style="margin-top:10px;font-size:11px;color:var(--yellow,#fbbf24);background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.2);border-radius:6px;padding:5px 8px">
+            ⚠ Excluidas posiciones abiertas:
+            ${pos.longVNTotal > 0 ? `LONG ${pos.longVNTotal.toLocaleString("es-AR")} VN` : ""}
+            ${pos.shortVNTotal > 0 ? `SHORT ${pos.shortVNTotal.toLocaleString("es-AR")} VN` : ""}
+           </div>`
+        : "";
+
+      const modalHTML = `
+        <div style="text-align:center;padding:4px 0">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:14px">${fechaLarga} · ${closedVN.toLocaleString("es-AR")} VN operados</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+            <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);border-radius:8px;padding:10px">
+              <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Precio prom. compra</div>
+              <div style="font-size:20px;font-weight:700;color:var(--green)">$ ${fmtMoneyARS(pcRound)}</div>
+              <div style="font-size:10px;color:var(--muted);margin-top:2px">exacto: ${fmtMoneyARS(precioPc)}</div>
+            </div>
+            <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:8px;padding:10px">
+              <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Precio prom. venta</div>
+              <div style="font-size:20px;font-weight:700;color:var(--red)">$ ${fmtMoneyARS(pvRound)}</div>
+              <div style="font-size:10px;color:var(--muted);margin-top:2px">exacto: ${fmtMoneyARS(precioPv)}</div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px">
+            <div style="background:var(--surface2,rgba(255,255,255,0.05));border-radius:6px;padding:8px">
+              <div style="color:var(--muted);margin-bottom:2px">Neto total (C+V)</div>
+              <div style="font-weight:600">$ ${fmtMoneyARS(netoTotal)}</div>
+            </div>
+            <div style="background:var(--surface2,rgba(255,255,255,0.05));border-radius:6px;padding:8px">
+              <div style="color:var(--muted);margin-bottom:2px">Resultado realizado</div>
+              <div style="font-weight:600;color:${resultado >= 0 ? "var(--green)" : "var(--red)"}">$ ${fmtMoneyARS(resultado)}</div>
+            </div>
+          </div>
+          ${abiertaWarn}
+        </div>`;
+
+      mostrarModal({
+        titulo: "Resumen del día",
+        msg: modalHTML,
+        labelConfirm: "⬇ Descargar TXT",
+        onConfirm: () => {
+          const lineaPlanilla = [
+            fmtMoneyARS(netoTotal),
+            fmtMoneyARS(pcRound),
+            fmtMoneyARS(pvRound),
+            closedVN.toLocaleString("es-AR"),
+            fechaCorta
+          ].join("\t");
+
+          const contenido = `RESUMEN OPERACIONES DIARIAS
+===========================
+Fecha:                   ${fechaLarga}
+Nominales operados:      ${closedVN.toLocaleString("es-AR")} VN
+Precio promedio compra:  $ ${fmtMoneyARS(precioPc)}
+Precio promedio venta:   $ ${fmtMoneyARS(precioPv)}
+Neto total (compras+ventas): $ ${fmtMoneyARS(netoTotal)}
+Resultado realizado:     $ ${fmtMoneyARS(resultado)}
+
+--- Para pegar en planilla (separado por tabulaciones) ---
+Neto total\tPrecio compra\tPrecio venta\tNominales\tFecha
+${lineaPlanilla}
+`;
+          const blob = new Blob([contenido], { type: "text/plain;charset=utf-8" });
+          const a = document.createElement("a");
+          a.href = URL.createObjectURL(blob);
+          a.download = `resumen_${new Date().toISOString().slice(0,10)}.txt`;
+          a.click();
+          URL.revokeObjectURL(a.href);
+        }
+      });
     }
 
     // ── Filtro y sort ─────────────────────────────────────────────────────
