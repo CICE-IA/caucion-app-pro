@@ -951,23 +951,27 @@
         onConfirm: () => {
           const lineaPlanilla = [
             fmtMoneyARS(netoTotal),
-            fmtMoneyARS(pcRound),
-            fmtMoneyARS(pvRound),
+            fmtMoneyARS(precioPc),
+            fmtMoneyARS(precioPv),
             closedVN.toLocaleString("es-AR"),
-            fechaCorta
+            fechaCorta,
+            fmtMoneyARS(resultado)
           ].join("\t");
 
           const contenido = `RESUMEN OPERACIONES DIARIAS
 ===========================
 Fecha:                   ${fechaLarga}
 Nominales operados:      ${closedVN.toLocaleString("es-AR")} VN
-Precio promedio compra:  $ ${fmtMoneyARS(precioPc)}
-Precio promedio venta:   $ ${fmtMoneyARS(precioPv)}
+Precio promedio compra:  $ ${fmtMoneyARS(precioPc)}  (ref. ${fmtMoneyARS(pcRound)})
+Precio promedio venta:   $ ${fmtMoneyARS(precioPv)}  (ref. ${fmtMoneyARS(pvRound)})
 Neto total (compras+ventas): $ ${fmtMoneyARS(netoTotal)}
 Resultado realizado:     $ ${fmtMoneyARS(resultado)}
 
 --- Para pegar en planilla (separado por tabulaciones) ---
-Neto total\tPrecio compra\tPrecio venta\tNominales\tFecha
+IMPORTANTE: usar precios exactos para que el resultado sea correcto en Excel.
+Los precios redondeados al 100 son solo referencia visual.
+
+Neto total\tPrecio compra (exacto)\tPrecio venta (exacto)\tNominales\tFecha\tResultado
 ${lineaPlanilla}
 `;
           const blob = new Blob([contenido], { type: "text/plain;charset=utf-8" });
