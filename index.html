@@ -897,10 +897,14 @@
 
       if (closedVN <= 0) { mostrarToast("No hay pares cerrados para exportar.", "error", 3000); return; }
 
-      const precioPc    = closedBuyNeto  / closedVN * 100;
-      const precioPv    = closedSellNeto / closedVN * 100;
-      const pcRound     = Math.round(precioPc / 100) * 100;
-      const pvRound     = Math.round(precioPv / 100) * 100;
+      // precioPc/pv tienen la comisión incluida (neto/VN×100).
+      // Para exportar a Excel donde la fórmula ya aplica comisión, usamos el precio crudo.
+      const precioPc    = closedBuyNeto  / closedVN * 100;          // neto: incluye comisión
+      const precioPv    = closedSellNeto / closedVN * 100;          // neto: incluye comisión
+      const rawPc       = precioPc / 1.0001;                         // precio mercado sin comisión
+      const rawPv       = precioPv / 0.9999;                         // precio mercado sin comisión
+      const pcRound     = Math.round(rawPc / 100) * 100;
+      const pvRound     = Math.round(rawPv / 100) * 100;
       const netoTotal   = closedBuyNeto + closedSellNeto;
       const resultado   = pos.realizadoPnL;
 
@@ -923,12 +927,12 @@
             <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);border-radius:8px;padding:10px">
               <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Precio prom. compra</div>
               <div style="font-size:20px;font-weight:700;color:var(--green)">$ ${fmtMoneyARS(pcRound)}</div>
-              <div style="font-size:10px;color:var(--muted);margin-top:2px">exacto: ${fmtMoneyARS(precioPc)}</div>
+              <div style="font-size:10px;color:var(--muted);margin-top:2px">exacto: ${fmtMoneyARS(rawPc)}</div>
             </div>
             <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:8px;padding:10px">
               <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Precio prom. venta</div>
               <div style="font-size:20px;font-weight:700;color:var(--red)">$ ${fmtMoneyARS(pvRound)}</div>
-              <div style="font-size:10px;color:var(--muted);margin-top:2px">exacto: ${fmtMoneyARS(precioPv)}</div>
+              <div style="font-size:10px;color:var(--muted);margin-top:2px">exacto: ${fmtMoneyARS(rawPv)}</div>
             </div>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px">
@@ -951,8 +955,8 @@
         onConfirm: () => {
           const lineaPlanilla = [
             fmtMoneyARS(netoTotal),
-            fmtMoneyARS(precioPc),
-            fmtMoneyARS(precioPv),
+            fmtMoneyARS(rawPc),
+            fmtMoneyARS(rawPv),
             closedVN.toLocaleString("es-AR"),
             fechaCorta,
             fmtMoneyARS(resultado)
@@ -962,8 +966,8 @@
 ===========================
 Fecha:                   ${fechaLarga}
 Nominales operados:      ${closedVN.toLocaleString("es-AR")} VN
-Precio promedio compra:  $ ${fmtMoneyARS(precioPc)}  (ref. ${fmtMoneyARS(pcRound)})
-Precio promedio venta:   $ ${fmtMoneyARS(precioPv)}  (ref. ${fmtMoneyARS(pvRound)})
+Precio promedio compra:  $ ${fmtMoneyARS(rawPc)}  (ref. ${fmtMoneyARS(pcRound)})
+Precio promedio venta:   $ ${fmtMoneyARS(rawPv)}  (ref. ${fmtMoneyARS(pvRound)})
 Neto total (compras+ventas): $ ${fmtMoneyARS(netoTotal)}
 Resultado realizado:     $ ${fmtMoneyARS(resultado)}
 
