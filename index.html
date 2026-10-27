@@ -1196,14 +1196,16 @@ ${lineaPlanilla}
       });
 
       const realizadoPnL = closedPairs.reduce((s, p) => s + p.pnl, 0);
-      // Break-even acumulado: precio al que cerrar el short deja resultado total = 0
+      // Break-even acumulado short: precio al que cerrar el short deja resultado total = 0
       const breakEvenShortAcum = shortVNTotal > 0 ? (shortNeto + realizadoPnL) / shortVNTotal / 1.0001 * 100 : 0;
+      // Break-even acumulado long: precio al que vender el long deja resultado total = 0
+      const breakEvenLongAcum  = longVNTotal  > 0 ? (longNeto  - realizadoPnL) / longVNTotal  / 0.9999 * 100 : 0;
 
       return {
         openLongs, openShorts, closedPairs, warnings, rollGroups,
         realizadoPnL,
         longVNTotal, shortVNTotal, longNeto, shortNeto,
-        longProm, shortProm, breakEvenLong, breakEvenShort, breakEvenShortAcum,
+        longProm, shortProm, breakEvenLong, breakEvenShort, breakEvenShortAcum, breakEvenLongAcum,
         posicionNeta: longVNTotal - shortVNTotal,
       };
     }
@@ -1316,11 +1318,54 @@ ${lineaPlanilla}
 
       // Bloques de posiciones abiertas
       if (pos.openLongs.length > 0) {
+        const dr = 0.0001;
+        const beActualL = pos.breakEvenLong;
+        const beAcumL   = pos.breakEvenLongAcum;
+        const diffPnLL  = pos.realizadoPnL;
+        const showAcumL = diffPnLL !== 0 && pos.longVNTotal > 0;
+
+        let tablaEscenariosL = "";
+        if (showAcumL) {
+          const step = 50;
+          const ini = Math.round((beAcumL - 2 * step) / step) * step;
+          const scenarioPrices = Array.from({ length: 6 }, (_, i) => ini + i * step);
+          const rows = scenarioPrices.map(p => {
+            const pnlLong = pos.longVNTotal * (p / 100) * (1 - dr) - pos.longNeto;
+            const pnlAcum = diffPnLL + pnlLong;
+            const clsL = pnlLong >= 0 ? "color:var(--green)" : "color:var(--red)";
+            const clsA = pnlAcum  >= 0 ? "color:var(--green)" : "color:var(--red)";
+            const diffA = Math.abs(p - beAcumL);
+            const diffS = Math.abs(p - beActualL);
+            const tagA = diffA < step * 0.6 ? ` <span style="font-size:9px;color:var(--primary)">(BE acum.)</span>` : "";
+            const tagS = diffS < step * 0.6 && Math.abs(beActualL - beAcumL) > step * 0.5
+                         ? ` <span style="font-size:9px;color:var(--muted)">(BE actual)</span>` : "";
+            return `<tr>
+              <td style="padding:2px 4px;text-align:right">$ ${fmtMoneyARS(Math.round(p))}${tagA}${tagS}</td>
+              <td style="padding:2px 4px;text-align:right;${clsL}">$ ${fmtMoneyARS(pnlLong)}</td>
+              <td style="padding:2px 4px;text-align:right;${clsA}">$ ${fmtMoneyARS(pnlAcum)}</td>
+            </tr>`;
+          }).join("");
+          tablaEscenariosL = `
+          <div style="border-top:1px solid rgba(16,185,129,0.2);margin:7px 0 4px;padding-top:6px">
+            <div class="pos-row"><span class="pos-label">P&L realizado acumulado</span><span class="pos-val ${diffPnLL >= 0 ? "ok" : "bad"}">$ ${fmtMoneyARS(diffPnLL)}</span></div>
+            <div class="pos-row"><span class="pos-label">Objetivo equilibrio total</span><span class="pos-val ${beAcumL >= beActualL ? "bad" : "ok"}">$ ${fmtMoneyARS(beAcumL)}</span></div>
+          </div>
+          <table style="width:100%;border-collapse:collapse;font-size:11px;margin-top:4px">
+            <thead><tr style="border-bottom:1px solid var(--border)">
+              <th style="text-align:right;padding:2px 4px;color:var(--muted);font-weight:normal">Venta</th>
+              <th style="text-align:right;padding:2px 4px;color:var(--muted);font-weight:normal">Long actual</th>
+              <th style="text-align:right;padding:2px 4px;color:var(--muted);font-weight:normal">Total acum.</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+          </table>`;
+        }
+
         posHTML += `<div class="pos-bloque pos-long">
           <div class="pos-titulo ok">▲ LONG ABIERTO &nbsp;·&nbsp; ${pos.longVNTotal.toLocaleString("es-AR")} VN</div>
           <div class="pos-row"><span class="pos-label">Precio prom.</span><span class="pos-val">$ ${fmtMoneyARS(pos.longProm)}</span></div>
           <div class="pos-row"><span class="pos-label">Costo neto</span><span class="pos-val">$ ${fmtMoneyARS(pos.longNeto)}</span></div>
-          <div class="pos-row"><span class="pos-label">Break-even venta</span><span class="pos-val ok">$ ${fmtMoneyARS(pos.breakEvenLong)}</span></div>
+          <div class="pos-row"><span class="pos-label">Break-even venta</span><span class="pos-val ok">$ ${fmtMoneyARS(beActualL)}</span></div>
+          ${tablaEscenariosL}
         </div>`;
       }
       if (pos.openShorts.length > 0) {
