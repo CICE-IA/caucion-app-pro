@@ -205,11 +205,75 @@
       .col-right  { grid-column: auto; }
       table { min-width: 380px; }
     }
+
+    /* ── App Tabs ──────────────────────────────────────────────────────────── */
+    .app-tabs-nav {
+      display: flex; gap: 2px; padding: 10px 14px 0;
+      max-width: 1680px; margin: 0 auto;
+    }
+    .app-tab {
+      padding: 8px 22px; border-radius: 10px 10px 0 0;
+      background: var(--card-bg); border: 1px solid var(--border); border-bottom: none;
+      color: var(--muted); cursor: pointer; font-size: 14px; transition: all 0.15s; width: auto; margin: 0;
+    }
+    .app-tab:hover { color: var(--text); background: var(--btn-sec-hover); }
+    .app-tab.active { background: var(--primary); color: white; border-color: var(--primary); }
+    .app-tabs-panel { display: none; }
+    .app-tabs-panel.active { display: block; }
+
+    /* ── Cauciones Tab ─────────────────────────────────────────────────────── */
+    .caucion-layout {
+      max-width: 1680px; margin: 0 auto; padding: 14px;
+      display: grid; grid-template-columns: 400px 1fr; gap: 14px; align-items: start;
+    }
+    @media (max-width: 900px) { .caucion-layout { grid-template-columns: 1fr; } }
+    .cau-preview {
+      background: var(--bg); border: 1px dashed var(--border);
+      border-radius: 10px; padding: 12px; margin-top: 10px;
+    }
+    .cau-prev-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 5px 0; font-size: 13px; border-bottom: 1px solid var(--border);
+    }
+    .cau-prev-row:last-child { border-bottom: none; }
+    .cau-prev-total {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 8px 0 2px; margin-top: 6px; border-top: 2px solid var(--primary);
+      font-size: 15px; font-weight: bold;
+    }
+    .cau-prev-neto {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 4px 0 0; font-size: 12px; color: var(--muted);
+    }
+    .cau-resumen-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px;
+    }
+    .cau-resumen-item {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 8px; padding: 8px 10px; text-align: center;
+    }
+    .cau-resumen-item .cau-rlabel { font-size: 11px; color: var(--muted); }
+    .cau-resumen-item .cau-rval { font-size: 13px; font-weight: bold; margin-top: 2px; }
+    .cau-input-inline {
+      width: 130px; padding: 3px 8px; font-size: 13px;
+      text-align: right; border-radius: 6px; border: 1px solid var(--border);
+      background: var(--bg); color: var(--text);
+    }
+    .cau-modal-overlay {
+      display: none; position: fixed; inset: 0; z-index: 1000;
+      background: rgba(0,0,0,0.65); align-items: center; justify-content: center;
+    }
   </style>
 </head>
 <body>
   <div id="toast-container"></div>
 
+  <div class="app-tabs-nav">
+    <button class="app-tab active" data-tab="trading" onclick="switchTab('trading')">📊 Trading</button>
+    <button class="app-tab" data-tab="cauciones" onclick="switchTab('cauciones')">🏦 Cauciones</button>
+  </div>
+
+  <div class="app-tabs-panel active" id="panel-trading">
   <div class="container">
 
     <!-- COLUMNA IZQUIERDA -->
@@ -418,6 +482,177 @@
       <div class="muted" id="tooltipGraficoGanancia">Pasá el mouse sobre la línea del gráfico para ver detalle de cada punto.</div>
     </div>
 
+  </div>
+  </div><!-- /panel-trading -->
+
+  <!-- ═══════════════════ CAUCIONES PANEL ═══════════════════ -->
+  <div class="app-tabs-panel" id="panel-cauciones">
+  <div class="caucion-layout">
+
+    <!-- IZQUIERDA: Formulario -->
+    <div>
+      <div class="card">
+        <h1>Nueva Colocación <span class="pill">Caución bursátil</span></h1>
+        <div class="row">
+          <div>
+            <label>Fecha</label>
+            <input type="date" id="cauFecha">
+          </div>
+          <div>
+            <label>Broker</label>
+            <select id="cauBroker" onchange="recalcCaucion()">
+              <option value="INVIU">INVIU</option>
+              <option value="Eco">Eco Valores</option>
+              <option value="Veta">Veta Capital</option>
+            </select>
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label>TNA (%)</label>
+            <input type="number" id="cauTNA" placeholder="Ej: 21" oninput="recalcCaucion()">
+          </div>
+          <div>
+            <label>Plazo (días)</label>
+            <input type="number" id="cauPlazo" value="1" min="1" oninput="recalcCaucion()">
+          </div>
+        </div>
+        <label>Monto a Colocar ($)</label>
+        <input type="number" id="cauMonto" placeholder="Ej: 5700000" oninput="recalcCaucion()">
+
+        <div class="cau-preview">
+          <div class="cau-prev-row">
+            <span style="color:var(--muted)">Interés bruto</span>
+            <span id="cauPrevInteres">$ 0,00</span>
+          </div>
+          <div class="cau-prev-row">
+            <span style="color:var(--muted)">Comisión <span style="font-size:10px">(editable)</span></span>
+            <input class="cau-input-inline" type="number" id="cauComision" value="0" step="0.01" oninput="recalcCaucionFinal()">
+          </div>
+          <div class="cau-prev-row">
+            <span style="color:var(--muted)">IVA 21%</span>
+            <span id="cauPrevIVA">$ 0,00</span>
+          </div>
+          <div class="cau-prev-row">
+            <span style="color:var(--muted)">Derechos de Mercado <span style="font-size:10px">(editable)</span></span>
+            <input class="cau-input-inline" type="number" id="cauDerechos" value="0" step="0.01" oninput="recalcCaucionFinal()">
+          </div>
+          <div class="cau-prev-total">
+            <span>Monto a Retirar</span>
+            <span id="cauPrevRetirar" class="ok">$ 0,00</span>
+          </div>
+          <div class="cau-prev-neto">
+            <span>Interés neto (ganancia)</span>
+            <span id="cauPrevNeto">$ 0,00</span>
+          </div>
+        </div>
+
+        <button onclick="registrarCaucion()" style="margin-top:12px">Registrar colocación</button>
+        <button class="btn-secondary" onclick="abrirConfigBrokers()" style="margin-top:6px">⚙ Configurar comisiones por broker</button>
+      </div>
+    </div>
+
+    <!-- DERECHA: Historial + Resumen -->
+    <div>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <h1 style="margin:0">Historial de Colocaciones</h1>
+          <div style="display:flex;gap:6px">
+            <button class="btn-secondary" onclick="exportarCaucionesTXT()" style="margin:0;width:auto;padding:6px 12px;font-size:12px">Exportar TXT</button>
+            <button class="btn-secondary" onclick="borrarTodasCauciones()" style="margin:0;width:auto;padding:6px 12px;font-size:12px">Borrar todo</button>
+          </div>
+        </div>
+
+        <div class="cau-resumen-grid">
+          <div class="cau-resumen-item">
+            <div class="cau-rlabel">Total colocado</div>
+            <div class="cau-rval" id="cauSumMonto">$ 0</div>
+          </div>
+          <div class="cau-resumen-item">
+            <div class="cau-rlabel">Total interés bruto</div>
+            <div class="cau-rval ok" id="cauSumInteres">$ 0</div>
+          </div>
+          <div class="cau-resumen-item">
+            <div class="cau-rlabel">Neto ganado</div>
+            <div class="cau-rval ok" id="cauSumNeto">$ 0</div>
+          </div>
+        </div>
+
+        <div class="filtro-chips" id="cauFiltroChips">
+          <button class="active" data-cau-filtro="todo" onclick="setCauFiltro('todo')">Todo</button>
+          <button data-cau-filtro="INVIU" onclick="setCauFiltro('INVIU')">INVIU</button>
+          <button data-cau-filtro="Eco" onclick="setCauFiltro('Eco')">Eco Valores</button>
+          <button data-cau-filtro="Veta" onclick="setCauFiltro('Veta')">Veta Capital</button>
+        </div>
+
+        <div class="table-wrap" style="margin-top:8px">
+          <table style="min-width:560px">
+            <colgroup>
+              <col style="width:72px">
+              <col style="width:80px">
+              <col style="width:52px">
+              <col style="width:40px">
+              <col style="width:120px">
+              <col style="width:95px">
+              <col style="width:120px">
+              <col style="width:40px">
+            </colgroup>
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Broker</th>
+                <th>TNA</th>
+                <th style="text-align:center">Días</th>
+                <th style="text-align:right">Monto</th>
+                <th style="text-align:right">Neto</th>
+                <th style="text-align:right">A Retirar</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="cauTablaOps"></tbody>
+            <tfoot id="cauTablaFoot"></tfoot>
+          </table>
+        </div>
+        <div class="muted" style="margin-top:6px">El historial se guarda automáticamente en este dispositivo.</div>
+      </div>
+    </div>
+
+  </div><!-- /caucion-layout -->
+  </div><!-- /panel-cauciones -->
+
+  <!-- Config Modal Brokers -->
+  <div class="cau-modal-overlay" id="cauConfigModal">
+    <div class="card" style="width:min(480px,95vw);max-height:90vh;overflow-y:auto">
+      <h1>Comisiones por broker</h1>
+      <div class="muted" style="margin-bottom:10px">Fórmula: Monto × (Tasa% / 100) / 365 × Plazo. Ajustá si tu broker usa otra estructura.</div>
+
+      <div style="margin-top:8px">
+        <div style="font-weight:bold;margin:8px 0 4px;color:var(--primary)">INVIU</div>
+        <div class="row">
+          <div><label>Comisión (% anual)</label><input type="number" id="cfgINVIUcom" step="0.01"></div>
+          <div><label>Derechos (% anual)</label><input type="number" id="cfgINVIUder" step="0.001"></div>
+        </div>
+      </div>
+      <div style="margin-top:8px">
+        <div style="font-weight:bold;margin:8px 0 4px;color:var(--primary)">Eco Valores</div>
+        <div class="row">
+          <div><label>Comisión (% anual)</label><input type="number" id="cfgEcocom" step="0.01"></div>
+          <div><label>Derechos (% anual)</label><input type="number" id="cfgEcoder" step="0.001"></div>
+        </div>
+      </div>
+      <div style="margin-top:8px">
+        <div style="font-weight:bold;margin:8px 0 4px;color:var(--primary)">Veta Capital</div>
+        <div class="row">
+          <div><label>Comisión (% anual)</label><input type="number" id="cfgVetacom" step="0.01"></div>
+          <div><label>Derechos (% anual)</label><input type="number" id="cfgVetader" step="0.001"></div>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:4px">
+        <button onclick="guardarConfigBrokers()">Guardar configuración</button>
+        <button class="btn-secondary" onclick="cerrarConfigModal()">Cancelar</button>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -1622,6 +1857,235 @@ ${lineaPlanilla}
     renderUltimoRespaldo();
     document.getElementById("opPrecio").focus();
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js");
+
+    // ════════════════════════════════════════════════════════════════════
+    // CAUCIONES — Registro de colocaciones bursátiles
+    // ════════════════════════════════════════════════════════════════════
+
+    const CAU_OPS_KEY    = "caucion_colocaciones";
+    const CAU_CFG_KEY    = "caucion_brokers_config";
+    const CAU_DEFAULT_CFG = {
+      INVIU: { comisionPct: 1.20,  derechosPct: 0.22   },
+      Eco:   { comisionPct: 2.96,  derechosPct: 0.1825 },
+      Veta:  { comisionPct: 0.77,  derechosPct: 0.1825 },
+    };
+
+    function getCauOps() {
+      try { return JSON.parse(localStorage.getItem(CAU_OPS_KEY) || "[]"); } catch { return []; }
+    }
+    function saveCauOps(ops) { localStorage.setItem(CAU_OPS_KEY, JSON.stringify(ops)); }
+
+    function getCauCfg() {
+      try {
+        const stored = JSON.parse(localStorage.getItem(CAU_CFG_KEY));
+        return stored || CAU_DEFAULT_CFG;
+      } catch { return CAU_DEFAULT_CFG; }
+    }
+    function saveCauCfg(cfg) { localStorage.setItem(CAU_CFG_KEY, JSON.stringify(cfg)); }
+
+    // ── Calculadora ────────────────────────────────────────────────────
+    function cauGetInputs() {
+      return {
+        tna:   parseFloat(document.getElementById("cauTNA").value)   || 0,
+        plazo: parseInt(document.getElementById("cauPlazo").value)   || 1,
+        monto: parseFloat(document.getElementById("cauMonto").value) || 0,
+        broker: document.getElementById("cauBroker").value,
+      };
+    }
+
+    function recalcCaucion() {
+      const { tna, plazo, monto, broker } = cauGetInputs();
+      const cfg = getCauCfg()[broker] || CAU_DEFAULT_CFG[broker] || { comisionPct: 1.2, derechosPct: 0.2 };
+      const interes  = monto * (tna / 100) / 365 * plazo;
+      const comision = monto * (cfg.comisionPct / 100) / 365 * plazo;
+      const derechos = monto * (cfg.derechosPct / 100) / 365 * plazo;
+      document.getElementById("cauComision").value = comision.toFixed(2);
+      document.getElementById("cauDerechos").value = derechos.toFixed(2);
+      _updateCaucionPreview(interes, monto);
+    }
+
+    function recalcCaucionFinal() {
+      const { tna, plazo, monto } = cauGetInputs();
+      const interes = monto * (tna / 100) / 365 * plazo;
+      _updateCaucionPreview(interes, monto);
+    }
+
+    function _updateCaucionPreview(interes, monto) {
+      const comision = parseFloat(document.getElementById("cauComision").value) || 0;
+      const derechos = parseFloat(document.getElementById("cauDerechos").value) || 0;
+      const iva      = comision * 0.21;
+      const neto     = interes - comision - iva - derechos;
+      const retirar  = monto + neto;
+      document.getElementById("cauPrevInteres").textContent = "$ " + fmtMoneyARS(interes);
+      document.getElementById("cauPrevIVA").textContent     = "$ " + fmtMoneyARS(iva);
+      document.getElementById("cauPrevRetirar").textContent = "$ " + fmtMoneyARS(retirar);
+      const netoEl = document.getElementById("cauPrevNeto");
+      netoEl.textContent = "$ " + fmtMoneyARS(neto);
+      netoEl.className = "cau-prev-neto " + (neto >= 0 ? "ok" : "bad");
+    }
+
+    // ── Registrar ──────────────────────────────────────────────────────
+    function registrarCaucion() {
+      const fecha  = document.getElementById("cauFecha").value;
+      const { tna, plazo, monto, broker } = cauGetInputs();
+      if (!fecha)                        { mostrarToast("Ingresá una fecha.", "error"); return; }
+      if (!isFinite(tna) || tna <= 0)   { mostrarToast("Ingresá una TNA válida.", "error"); return; }
+      if (!isFinite(monto) || monto <= 0){ mostrarToast("Ingresá un monto válido.", "error"); return; }
+
+      const interes  = monto * (tna / 100) / 365 * plazo;
+      const comision = parseFloat(document.getElementById("cauComision").value) || 0;
+      const derechos = parseFloat(document.getElementById("cauDerechos").value) || 0;
+      const iva      = comision * 0.21;
+      const neto     = interes - comision - iva - derechos;
+      const retirar  = monto + neto;
+
+      const op = { id: Date.now(), fecha, broker, tna, plazo, monto, interes, comision, iva, derechos, neto, retirar };
+      const ops = getCauOps();
+      ops.push(op);
+      saveCauOps(ops);
+
+      mostrarToast("Colocación registrada.", "ok");
+      document.getElementById("cauTNA").value   = "";
+      document.getElementById("cauMonto").value = "";
+      recalcCaucion();
+      renderCaucionTabla();
+    }
+
+    // ── Tabla + Resumen ────────────────────────────────────────────────
+    let cauFiltro = "todo";
+
+    function setCauFiltro(f) {
+      cauFiltro = f;
+      document.querySelectorAll("#cauFiltroChips button").forEach(b =>
+        b.classList.toggle("active", b.dataset.cauFiltro === f)
+      );
+      renderCaucionTabla();
+    }
+
+    function renderCaucionTabla() {
+      const ops = getCauOps();
+      const tbody = document.getElementById("cauTablaOps");
+      const tfoot = document.getElementById("cauTablaFoot");
+      let visible = cauFiltro === "todo" ? [...ops] : ops.filter(op => op.broker === cauFiltro);
+      visible.sort((a, b) => b.fecha.localeCompare(a.fecha) || b.id - a.id);
+
+      if (!visible.length) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:16px">No hay colocaciones registradas.</td></tr>`;
+        tfoot.innerHTML = "";
+      } else {
+        tbody.innerHTML = visible.map(op => {
+          const fd = new Date(op.fecha + "T12:00:00").toLocaleDateString("es-AR", { day:"2-digit", month:"2-digit" });
+          const nc = op.neto >= 0 ? "ok" : "bad";
+          return `<tr>
+            <td>${fd}</td>
+            <td>${op.broker}</td>
+            <td>${op.tna}%</td>
+            <td style="text-align:center">${op.plazo}</td>
+            <td style="text-align:right">$ ${fmtMoneyARS(op.monto)}</td>
+            <td style="text-align:right" class="${nc}">$ ${fmtMoneyARS(op.neto)}</td>
+            <td style="text-align:right">$ ${fmtMoneyARS(op.retirar)}</td>
+            <td><button onclick="eliminarCaucion(${op.id})" style="margin:0;padding:3px 8px;font-size:11px;width:auto;background:var(--btn-sec)">✕</button></td>
+          </tr>`;
+        }).join("");
+
+        const sumM = visible.reduce((s, op) => s + op.monto, 0);
+        const sumN = visible.reduce((s, op) => s + op.neto,  0);
+        const sumR = visible.reduce((s, op) => s + op.retirar, 0);
+        tfoot.innerHTML = `<tr>
+          <td colspan="4" style="color:var(--muted)">Total (${visible.length})</td>
+          <td style="text-align:right">$ ${fmtMoneyARS(sumM)}</td>
+          <td style="text-align:right" class="${sumN >= 0 ? "ok" : "bad"}">$ ${fmtMoneyARS(sumN)}</td>
+          <td style="text-align:right">$ ${fmtMoneyARS(sumR)}</td>
+          <td></td>
+        </tr>`;
+      }
+
+      const allNeto   = ops.reduce((s, op) => s + op.neto,    0);
+      const allInteres = ops.reduce((s, op) => s + op.interes, 0);
+      const allMonto  = ops.reduce((s, op) => s + op.monto,   0);
+      document.getElementById("cauSumMonto").textContent   = "$ " + fmtMoneyARS(allMonto);
+      document.getElementById("cauSumInteres").textContent = "$ " + fmtMoneyARS(allInteres);
+      document.getElementById("cauSumNeto").textContent    = "$ " + fmtMoneyARS(allNeto);
+    }
+
+    function eliminarCaucion(id) {
+      saveCauOps(getCauOps().filter(op => op.id !== id));
+      renderCaucionTabla();
+      mostrarToast("Colocación eliminada.", "ok");
+    }
+
+    function borrarTodasCauciones() {
+      if (!confirm("¿Borrar todas las colocaciones?")) return;
+      saveCauOps([]);
+      renderCaucionTabla();
+      mostrarToast("Historial borrado.", "ok");
+    }
+
+    // ── Exportar TXT ───────────────────────────────────────────────────
+    function exportarCaucionesTXT() {
+      const ops = getCauOps();
+      if (!ops.length) { mostrarToast("No hay colocaciones para exportar.", "error"); return; }
+      ops.sort((a, b) => a.fecha.localeCompare(b.fecha) || a.id - b.id);
+
+      const lines = ops.map(op => {
+        const fd = new Date(op.fecha + "T12:00:00").toLocaleDateString("es-AR", { day:"2-digit", month:"2-digit" });
+        return [fd, "Caucion", op.tna + "%", op.broker,
+                Math.round(op.monto), Math.round(op.neto), Math.round(op.retirar)].join("\t");
+      });
+
+      const header = ["Fecha", "Tipo", "TNA", "Broker", "Monto", "Interes Neto", "Monto a Retirar"].join("\t");
+      const content = header + "\n" + lines.join("\n");
+
+      const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+      const url  = URL.createObjectURL(blob);
+      const a    = Object.assign(document.createElement("a"), { href: url, download: "cauciones_" + new Date().toISOString().slice(0, 10) + ".txt" });
+      a.click();
+      URL.revokeObjectURL(url);
+      mostrarToast("TXT exportado.", "ok");
+    }
+
+    // ── Configuración de brokers ───────────────────────────────────────
+    function abrirConfigBrokers() {
+      const cfg = getCauCfg();
+      const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+      set("cfgINVIUcom", (cfg.INVIU || CAU_DEFAULT_CFG.INVIU).comisionPct);
+      set("cfgINVIUder", (cfg.INVIU || CAU_DEFAULT_CFG.INVIU).derechosPct);
+      set("cfgEcocom",   (cfg.Eco   || CAU_DEFAULT_CFG.Eco  ).comisionPct);
+      set("cfgEcoder",   (cfg.Eco   || CAU_DEFAULT_CFG.Eco  ).derechosPct);
+      set("cfgVetacom",  (cfg.Veta  || CAU_DEFAULT_CFG.Veta ).comisionPct);
+      set("cfgVetader",  (cfg.Veta  || CAU_DEFAULT_CFG.Veta ).derechosPct);
+      document.getElementById("cauConfigModal").style.display = "flex";
+    }
+
+    function guardarConfigBrokers() {
+      const g = id => parseFloat(document.getElementById(id).value);
+      const cfg = {
+        INVIU: { comisionPct: g("cfgINVIUcom"), derechosPct: g("cfgINVIUder") },
+        Eco:   { comisionPct: g("cfgEcocom"),   derechosPct: g("cfgEcoder")   },
+        Veta:  { comisionPct: g("cfgVetacom"),  derechosPct: g("cfgVetader")  },
+      };
+      saveCauCfg(cfg);
+      cerrarConfigModal();
+      recalcCaucion();
+      mostrarToast("Configuración guardada.", "ok");
+    }
+
+    function cerrarConfigModal() {
+      document.getElementById("cauConfigModal").style.display = "none";
+    }
+
+    // ── Tab switch ─────────────────────────────────────────────────────
+    function switchTab(tab) {
+      document.querySelectorAll(".app-tab").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
+      document.querySelectorAll(".app-tabs-panel").forEach(p => p.classList.toggle("active", p.id === "panel-" + tab));
+    }
+
+    // ── Cauciones init ─────────────────────────────────────────────────
+    (function cauInit() {
+      document.getElementById("cauFecha").value = new Date().toISOString().slice(0, 10);
+      renderCaucionTabla();
+      recalcCaucion();
+    })();
   </script>
 </body>
 </html>
